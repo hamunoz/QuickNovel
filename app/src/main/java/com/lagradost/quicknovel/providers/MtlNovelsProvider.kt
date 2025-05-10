@@ -8,8 +8,8 @@ import com.lagradost.quicknovel.network.CloudflareKiller
 import org.jsoup.Jsoup
 
 class MtlNovelProvider : MainAPI() {
-    override val name = "MtlNovel Es"
-    override val mainUrl = "https://es.mtlnovels.com"
+    override val name = "MtlNovel"
+    override val mainUrl = "https://www.mtlnovels.com"
     override val hasMainPage = true
 
     override val iconId = R.drawable.icon_mtlnovel
