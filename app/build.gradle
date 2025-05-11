@@ -22,7 +22,7 @@ android {
         minSdkVersion 21
         targetSdkVersion 35
         versionCode 56
-        versionName "3.3.0"
+        versionName "3.3.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -71,7 +71,7 @@ dependencies {
     implementation 'androidx.navigation:navigation-fragment-ktx:2.8.9'
     implementation 'androidx.navigation:navigation-ui-ktx:2.8.9'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
-    implementation 'androidx.work:work-runtime-ktx:2.10.0'
+    implementation 'androidx.work:work-runtime-ktx:2.10.1'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
@@ -82,7 +82,7 @@ dependencies {
     implementation "androidx.preference:preference-ktx:1.2.1"
     implementation "me.xdrop:fuzzywuzzy:1.4.0"
 
-    implementation('nl.siegmann.epublib:epublib-core:3.1') {
+    implementation('io.documentnode:epub4j-core:4.2.1') {
         exclude group: 'org.slf4j'
         exclude group: 'xmlpull'
     }
@@ -106,4 +106,6 @@ dependencies {
     implementation "io.noties.markwon:html:4.6.2"
 
     implementation "com.facebook.shimmer:shimmer:0.5.0"
+
+    implementation "com.google.mlkit:translate:17.0.3"
 }

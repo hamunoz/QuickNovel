@@ -2,7 +2,6 @@ package com.lagradost.quicknovel.providers
 
 import com.lagradost.quicknovel.*
 import com.lagradost.quicknovel.MainActivity.Companion.app
-import org.jsoup.Jsoup
 import java.util.*
 
 class KolNovelProvider : MainAPI() {
@@ -85,7 +84,7 @@ class KolNovelProvider : MainAPI() {
         val document = app.get(url).document
         val headers = document.select("div.bsx")
         val returnValue = headers.mapNotNull { h ->
-            val imageHeader = h?.selectFirst("a.tip")
+            val imageHeader = h.selectFirst("a.tip")
 
             val cUrl = imageHeader?.attr("abs:href") ?: return@mapNotNull null
             val name = imageHeader.select("div.tt span.ntitle").text() ?: return@mapNotNull null
@@ -113,7 +112,7 @@ class KolNovelProvider : MainAPI() {
 
         val returnValue: ArrayList<SearchResponse> = ArrayList()
         for (h in headers) {
-            val head = h?.selectFirst("a.tip")
+            val head = h.selectFirst("a.tip")
 
             val url = head?.attr("abs:href") ?: continue
 
@@ -146,7 +145,7 @@ class KolNovelProvider : MainAPI() {
         val data: ArrayList<ChapterData> = ArrayList()
         val chapterHeaders = document.select("li[data-id] > a")//.eplister ul
         for (c in chapterHeaders) {
-            val cUrl = c?.attr("href") ?: continue
+            val cUrl = c.attr("href") ?: continue
             val cName = c.select("div.epl-title").text() + ":" + c.select("div.epl-num").text()
             val added = c.select("div.epl-date").text()
             val views = null
@@ -158,9 +157,8 @@ class KolNovelProvider : MainAPI() {
 
         return newStreamResponse(url = url, name = name, data = data) {
             for (a in authors) {
-                val atter = a?.attr("href")
-                if ((atter?.length
-                        ?: continue) > "$mainUrl/writer/".length && atter.startsWith("$mainUrl/writer/")
+                val atter = a.attr("href")
+                if (atter.length > "$mainUrl/writer/".length && atter.startsWith("$mainUrl/writer/")
                 ) {
                     author = a.text()
                     break

@@ -24,8 +24,6 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.preference.PreferenceManager
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.json.JsonMapper
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -80,9 +78,6 @@ import kotlin.reflect.KClass
 
 class MainActivity : AppCompatActivity() {
     companion object {
-        private val mapper = JsonMapper.builder().addModule(KotlinModule())
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build()!!
-
         private var _mainActivity: WeakReference<MainActivity>? = null
         private var mainActivity
             get() = _mainActivity?.get()

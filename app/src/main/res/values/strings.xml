@@ -21,6 +21,8 @@
     <string name="reload_error">Retry connection…</string>
     <string name="download_text">Download</string>
     <string name="download">Download</string>
+    <string name="download_ml">Download translation model</string>
+    <string name="download_ml_long">To translate locally the app needs to download the translation model (~30MB)</string>
     <string name="novel_imagecover_descript">Novel Imagecover</string>
     <string name="background_image_descript">Background Image</string>
     <string name="back_to_search">Back to search</string>
@@ -221,4 +223,5 @@
     <string name="sleep_timer">Sleep</string>
     <string name="sleep_format">%d min</string>
     <string name="sleep_format_stop">TTS will stop in %d min</string>
+    <string name="google_translate">Google translate</string>
 </resources>

@@ -1,13 +1,16 @@
 package com.lagradost.quicknovel.providers
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.lagradost.quicknovel.*
+import com.lagradost.quicknovel.ErrorLoadingException
+import com.lagradost.quicknovel.LoadResponse
+import com.lagradost.quicknovel.MainAPI
 import com.lagradost.quicknovel.MainActivity.Companion.app
+import com.lagradost.quicknovel.SearchResponse
+import com.lagradost.quicknovel.fixUrlNull
 import com.lagradost.quicknovel.mvvm.logError
+import com.lagradost.quicknovel.newChapterData
+import com.lagradost.quicknovel.newStreamResponse
+import com.lagradost.quicknovel.util.AppUtils.parseJson
 
 class WattpadProvider : MainAPI() {
     override val mainUrl = "https://www.wattpad.com"
@@ -27,11 +30,6 @@ class WattpadProvider : MainAPI() {
             SearchResponse(name = title, url = href, posterUrl = img, apiName = name)
         }
     }
-
-    val jsonmapper: ObjectMapper = jacksonObjectMapper().configure(
-        DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
-        false
-    )
 
     data class MainData(
         var part: Metadata? = null
@@ -214,7 +212,7 @@ class WattpadProvider : MainAPI() {
 
         var suffix = ""
         try {
-            val data = jsonmapper.readValue<Map<String, Metadata>>(htmlJson)
+            val data = parseJson<Map<String, Metadata>>(htmlJson)
             data.values.firstOrNull()?.data?.textUrl?.text?.let { str ->
                 val index = str.indexOf('?')
                 val before = str.substring(0 until index)
