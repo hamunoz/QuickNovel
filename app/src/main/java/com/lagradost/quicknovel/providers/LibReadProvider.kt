@@ -114,7 +114,9 @@ open class LibReadProvider : MainAPI() {
                 name = h3.attr("title") ?: return@mapNotNull null,
                 url = h3.attr("href") ?: return@mapNotNull null
             ) {
-                posterUrl = h.selectFirst("div.pic > a > img")?.attr("src")
+                
+posterUrl = fixUrlNull(document.select(" div.pic > img").attr("src"))
+//posterUrl = h.selectFirst("div.pic > a > img")?.attr("src")
                 //latestChapter = h.select("div.item")[2].selectFirst("> div > a")?.text()
             }
         }
