@@ -15,7 +15,6 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
-import androidx.core.widget.addTextChangedListener
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -38,7 +37,6 @@ import com.lagradost.quicknovel.ui.ReadType
 import com.lagradost.quicknovel.ui.mainpage.MainAdapter2
 import com.lagradost.quicknovel.ui.mainpage.MainPageFragment
 import com.lagradost.quicknovel.util.SettingsHelper.getRating
-import com.lagradost.quicknovel.util.SingleSelectionHelper.showDialog
 import com.lagradost.quicknovel.util.UIHelper
 import com.lagradost.quicknovel.util.UIHelper.colorFromAttribute
 import com.lagradost.quicknovel.util.UIHelper.fixPaddingStatusbar
@@ -304,10 +302,11 @@ class ResultFragment : Fragment() {
                             synopsis
                         }
 
+                        var isExpanded = false
                         resultSynopsisText.setOnClickListener {
-                            val builder: AlertDialog.Builder = AlertDialog.Builder(requireContext())
-                            builder.setMessage(res.synopsis.html()).setTitle(R.string.synopsis)
-                                .show()
+                            isExpanded = !isExpanded
+                            resultSynopsisText.text =
+                                if (isExpanded) res.synopsis.html() else syno.html()
                         }
                         resultSynopsisText.text = syno.html()
                     } ?: run {
@@ -343,11 +342,15 @@ class ResultFragment : Fragment() {
     private fun doAction(action: Int) {
         when (action) {
             R.string.resume -> {
-                viewModel.downloadOrPause()
+                viewModel.download()
             }
 
-            R.string.download, R.string.re_downloaded -> {
+            R.string.download -> {
                 viewModel.downloadFrom(null)
+            }
+
+            R.string.re_downloaded -> {
+                viewModel.download()
             }
 
             R.string.download_from_chapter -> {
@@ -554,7 +557,6 @@ class ResultFragment : Fragment() {
 
             resultTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab?) {
-                    println("addOnTabSelectedListener ${resultTabs.selectedTabPosition}")
                     viewModel.switchTab(tab?.id, resultTabs.selectedTabPosition)
                 }
 
@@ -647,6 +649,7 @@ class ResultFragment : Fragment() {
                 "${progressState.progress}/${progressState.total}"
 
             binding.resultDownloadProgressBarNotDownloaded.apply {
+                println("progressState: ${progressState}")
                 max = progressState.total.toInt() * 100
                 val animation: ObjectAnimator = ObjectAnimator.ofInt(
                     this,

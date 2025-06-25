@@ -1,6 +1,7 @@
 package com.lagradost.quicknovel.ui.download
 
 import android.content.DialogInterface
+import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -12,7 +13,11 @@ import com.lagradost.quicknovel.BaseApplication.Companion.getKeys
 import com.lagradost.quicknovel.BaseApplication.Companion.removeKey
 import com.lagradost.quicknovel.BaseApplication.Companion.setKey
 import com.lagradost.quicknovel.BookDownloader2
-import com.lagradost.quicknovel.BookDownloader2Helper
+import com.lagradost.quicknovel.BookDownloader2.currentDownloads
+import com.lagradost.quicknovel.BookDownloader2.currentDownloadsMutex
+import com.lagradost.quicknovel.BookDownloader2.downloadInfoMutex
+import com.lagradost.quicknovel.BookDownloader2.downloadProgress
+import com.lagradost.quicknovel.BookDownloader2.downloadProgressChanged
 import com.lagradost.quicknovel.CURRENT_TAB
 import com.lagradost.quicknovel.CommonActivity.activity
 import com.lagradost.quicknovel.DOWNLOAD_EPUB_LAST_ACCESS
@@ -20,6 +25,7 @@ import com.lagradost.quicknovel.DOWNLOAD_NORMAL_SORTING_METHOD
 import com.lagradost.quicknovel.DOWNLOAD_SETTINGS
 import com.lagradost.quicknovel.DOWNLOAD_SORTING_METHOD
 import com.lagradost.quicknovel.DownloadActionType
+import com.lagradost.quicknovel.DownloadFileWorkManager
 import com.lagradost.quicknovel.DownloadProgressState
 import com.lagradost.quicknovel.DownloadState
 import com.lagradost.quicknovel.MainActivity
@@ -27,6 +33,7 @@ import com.lagradost.quicknovel.MainActivity.Companion.loadResult
 import com.lagradost.quicknovel.R
 import com.lagradost.quicknovel.RESULT_BOOKMARK
 import com.lagradost.quicknovel.RESULT_BOOKMARK_STATE
+import com.lagradost.quicknovel.mvvm.launchSafe
 import com.lagradost.quicknovel.ui.ReadType
 import com.lagradost.quicknovel.util.Coroutines.ioSafe
 import com.lagradost.quicknovel.util.ResultCached
@@ -35,8 +42,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.util.concurrent.CopyOnWriteArrayList
 import me.xdrop.fuzzywuzzy.FuzzySearch
+import java.util.concurrent.CopyOnWriteArrayList
 
 const val DEFAULT_SORT = 0
 const val ALPHA_SORT = 1
@@ -72,8 +79,8 @@ class DownloadViewModel : ViewModel() {
         currentTab.postValue(position)
     }
 
-    fun refreshCard(card: DownloadFragment.DownloadDataLoaded) = viewModelScope.launch {
-        BookDownloader2.downloadFromCard(card)
+    fun refreshCard(card: DownloadFragment.DownloadDataLoaded) {
+        DownloadFileWorkManager.download(card, context ?: return)
     }
 
     fun pause(card: DownloadFragment.DownloadDataLoaded) {
@@ -120,16 +127,39 @@ class DownloadViewModel : ViewModel() {
         }
     }
 
-    fun refresh() = viewModelScope.launch {
-        val values = cardsDataMutex.withLock {
+    @WorkerThread
+    suspend fun refreshInternal() {
+        val allValues = cardsDataMutex.withLock {
             cardsData.values
         }
-        for (card in values) {
-            // avoid div by zero
-            if (card.downloadedTotal <= 0 || (card.downloadedCount * 100 / card.downloadedTotal) > 90) {
-                BookDownloader2.downloadFromCard(card)
+
+        val values = currentDownloadsMutex.withLock {
+            allValues.filter { card ->
+                card.downloadedTotal <= 0 || (card.downloadedCount * 100 / card.downloadedTotal) > 90 && !currentDownloads.contains(
+                    card.id
+                )
             }
         }
+
+        downloadInfoMutex.withLock {
+            for (card in values) {
+                downloadProgress[card.id]?.apply {
+                    state = DownloadState.IsPending
+                    lastUpdatedMs = System.currentTimeMillis()
+                    downloadProgressChanged.invoke(card.id to this)
+                }
+            }
+        }
+
+        for (card in values) {
+            if (card.downloadedTotal <= 0 || (card.downloadedCount * 100 / card.downloadedTotal) > 90) {
+                BookDownloader2.downloadWorkThread(card)
+            }
+        }
+    }
+
+    fun refresh() {
+        DownloadFileWorkManager.refreshAll(this@DownloadViewModel, context ?: return)
     }
 
     fun showMetadata(card: DownloadFragment.DownloadDataLoaded) {
@@ -168,7 +198,7 @@ class DownloadViewModel : ViewModel() {
     fun delete(card: ResultCached) {
         removeKey(RESULT_BOOKMARK, card.id.toString())
         removeKey(RESULT_BOOKMARK_STATE, card.id.toString())
-        loadAllData()
+        loadAllData(false)
     }
 
     fun deleteAlert(card: DownloadFragment.DownloadDataLoaded) {
@@ -355,8 +385,8 @@ class DownloadViewModel : ViewModel() {
         _pages.postValue(list)
     }
 
-    fun loadAllData() = viewModelScope.launch {
-
+    fun loadAllData(refreshAll: Boolean) = viewModelScope.launch {
+        if (refreshAll) fetchAllData(false)
         val mapping: HashMap<Int, ArrayList<ResultCached>> = hashMapOf(
             ReadType.PLAN_TO_READ.prefValue to arrayListOf(),
             ReadType.DROPPED.prefValue to arrayListOf(),
@@ -419,9 +449,6 @@ class DownloadViewModel : ViewModel() {
         BookDownloader2.downloadProgressChanged += ::progressChanged
         BookDownloader2.downloadDataRefreshed += ::downloadDataRefreshed
         BookDownloader2.downloadRemoved += ::downloadRemoved
-
-        // just in case this runs way after other init that we don't miss downloadDataRefreshed
-        downloadDataRefreshed(0)
     }
 
     override fun onCleared() {
@@ -436,45 +463,32 @@ class DownloadViewModel : ViewModel() {
     private val cardsData: HashMap<Int, DownloadFragment.DownloadDataLoaded> = hashMapOf()
 
     private fun progressChanged(data: Pair<Int, DownloadProgressState>) =
-        ioSafe {
+        viewModelScope.launchSafe {
             cardsDataMutex.withLock {
                 val (id, state) = data
-                val newState = state.eta(context ?: return@ioSafe)
+                val newState = state.eta(context ?: return@launchSafe)
                 cardsData[id] = cardsData[id]?.copy(
                     downloadedCount = state.progress,
                     downloadedTotal = state.total,
                     state = state.state,
                     ETA = newState,
-                ) ?: return@ioSafe
+                ) ?: return@launchSafe
             }
             postCards()
         }
 
-    private fun downloadRemoved(id: Int) = ioSafe {
+    private fun downloadRemoved(id: Int) = viewModelScope.launchSafe {
         cardsDataMutex.withLock {
             cardsData -= id
         }
         postCards()
     }
 
-    private fun progressDataChanged(data: Pair<Int, DownloadFragment.DownloadData>) = ioSafe {
-        cardsDataMutex.withLock {
-            val (id, value) = data
-            cardsData[id] = cardsData[id]?.copy(
-                source = value.source,
-                name = value.name,
-                author = value.author,
-                posterUrl = value.posterUrl,
-                rating = value.rating,
-                peopleVoted = value.peopleVoted,
-                views = value.views,
-                synopsis = value.synopsis,
-                tags = value.tags,
-                apiName = value.apiName,
-                lastUpdated = value.lastUpdated,
-                lastDownloaded = value.lastDownloaded
-            ) ?: run {
-                DownloadFragment.DownloadDataLoaded(
+    private fun progressDataChanged(data: Pair<Int, DownloadFragment.DownloadData>) =
+        viewModelScope.launchSafe {
+            cardsDataMutex.withLock {
+                val (id, value) = data
+                cardsData[id] = cardsData[id]?.copy(
                     source = value.source,
                     name = value.name,
                     author = value.author,
@@ -485,26 +499,39 @@ class DownloadViewModel : ViewModel() {
                     synopsis = value.synopsis,
                     tags = value.tags,
                     apiName = value.apiName,
-                    downloadedCount = 0,
-                    downloadedTotal = 0,
-                    ETA = "",
-                    state = DownloadState.Nothing,
-                    id = id,
-                    generating = false,
                     lastUpdated = value.lastUpdated,
-                    lastDownloaded = value.lastDownloaded,
-                )
+                    lastDownloaded = value.lastDownloaded
+                ) ?: run {
+                    DownloadFragment.DownloadDataLoaded(
+                        source = value.source,
+                        name = value.name,
+                        author = value.author,
+                        posterUrl = value.posterUrl,
+                        rating = value.rating,
+                        peopleVoted = value.peopleVoted,
+                        views = value.views,
+                        synopsis = value.synopsis,
+                        tags = value.tags,
+                        apiName = value.apiName,
+                        downloadedCount = 0,
+                        downloadedTotal = 0,
+                        ETA = "",
+                        state = DownloadState.Nothing,
+                        id = id,
+                        generating = false,
+                        lastUpdated = value.lastUpdated,
+                        lastDownloaded = value.lastDownloaded,
+                    )
+                }
             }
+            postCards()
         }
-        postCards()
-    }
 
-    @Suppress("UNUSED_PARAMETER")
-    private fun downloadDataRefreshed(_id: Int) = ioSafe {
-        BookDownloader2.downloadInfoMutex.withLock {
+    suspend fun fetchAllData(postCard: Boolean) {
+        downloadInfoMutex.withLock {
             cardsDataMutex.withLock {
                 BookDownloader2.downloadData.map { (key, value) ->
-                    val info = BookDownloader2.downloadProgress[key] ?: return@map
+                    val info = downloadProgress[key] ?: return@map
                     cardsData[key] = DownloadFragment.DownloadDataLoaded(
                         source = value.source,
                         name = value.name,
@@ -527,7 +554,12 @@ class DownloadViewModel : ViewModel() {
                     )
                 }
             }
-            postCards()
+            if (postCard) postCards()
         }
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun downloadDataRefreshed(_id: Int) = viewModelScope.launchSafe {
+        fetchAllData(true)
     }
 }
