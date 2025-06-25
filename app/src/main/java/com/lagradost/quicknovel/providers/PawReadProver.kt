@@ -71,84 +71,100 @@ class PawReadProver : MainAPI() {
         orderBy: String?,
         tag: String?
     ): HeadMainPageResponse {
-        val url = "$mainUrl/list/${mainCategory ?: "all-"}${tag ?: "All"}/${orderBy ?: "update"}/"
+        // Permitir paginación: agrega ?page=2, ?page=3, etc. según sea necesario
+        val baseUrl = "$mainUrl/list/${mainCategory ?: "all-"}${tag ?: "All"}/${orderBy ?: "update"}/"
+        val url = if (page > 0) "$baseUrl?page=$page" else baseUrl
 
-        if (page > 1) {
-            return HeadMainPageResponse(url = url, emptyList())
-        }
         val document = app.get(url).document
-        return HeadMainPageResponse(
-            url,
-            list = document.select(".list-comic-thumbnail").mapNotNull { select ->
-                val node = select.selectFirst(".caption>h3>a") ?: return@mapNotNull null
-                val href = node.attr("href") ?: return@mapNotNull null
-                newSearchResponse(
-                    name = node.text(),
-                    url = href
-                ) {
-                    posterUrl = fixUrlNull(select.selectFirst(".image-link>img")?.attr("src"))
-                }
-            })
-    }
-
-    override suspend fun search(query: String): List<SearchResponse> {
-        val url = "$mainUrl/search/?keywords=$query"
-        val document = app.get(url).document
-        return document.select(".list-comic-thumbnail").mapNotNull { select ->
-            val node = select.selectFirst(".caption>h3>a") ?: return@mapNotNull null
+        val items = document.select(".list-comic-thumbnail").mapNotNull { element ->
+            val node = element.selectFirst(".caption>h3>a") ?: return@mapNotNull null
             val href = node.attr("href") ?: return@mapNotNull null
             newSearchResponse(
                 name = node.text(),
                 url = href
             ) {
-                posterUrl = fixUrlNull(select.selectFirst(".image-link>img")?.attr("src"))
+                posterUrl = fixUrlNull(element.selectFirst(".image-link>img")?.attr("src"))
+            }
+        }
+        return HeadMainPageResponse(url, list = items)
+    }
+
+    override suspend fun search(query: String): List<SearchResponse> {
+        val url = "$mainUrl/search/?keywords=$query"
+        val document = app.get(url).document
+        return document.select(".list-comic-thumbnail").mapNotNull { element ->
+            val node = element.selectFirst(".caption>h3>a") ?: return@mapNotNull null
+            val href = node.attr("href") ?: return@mapNotNull null
+            newSearchResponse(
+                name = node.text(),
+                url = href
+            ) {
+                posterUrl = fixUrlNull(element.selectFirst(".image-link>img")?.attr("src"))
             }
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-
-        //val comic = document.selectFirst(".comic-view")
-        val board = document.selectFirst("#tab1_board")!!
+        val board = document.selectFirst("#tab1_board") ?: throw ErrorLoadingException("Can't find novel info.")
         val regex = Regex("'(\\d+)'")
-        val prefix = "$url/".replace("//", "/")
+        val prefix = if (url.endsWith("/")) url else "$url/"
+
+        val chapters = document.select(".item-box").toList().filter { element ->
+            element.selectFirst("div>svg") == null
+        }.mapNotNull { element ->
+            val onclick = element.attr("onclick")
+            val match = regex.find(onclick) ?: return@mapNotNull null
+            val chapterId = match.groupValues[1]
+            val chapterName = element.selectFirst("div>span.c_title")?.text() ?: return@mapNotNull null
+            newChapterData(
+                name = chapterName,
+                url = "$prefix$chapterId.html"
+            )
+        }
+
+        val info = document.select("#views_info>div")
+        val novelName = board.selectFirst("div>h1")?.text() ?: throw ErrorLoadingException("No title found.")
+        val author = info.getOrNull(3)?.text()
+        val views = info.getOrNull(1)?.text()?.trim()?.removeSuffix("Views")?.trimEnd()?.toIntOrNull()
+        val rating = document.select(".comic-score>span").getOrNull(1)?.text()?.toFloatOrNull()
+            ?.let { (it * 1000.0 / 5.0).roundToInt() }
+        val peopleVoted = document.selectFirst("#scoreCount")?.text()?.toIntOrNull()
+        val tags = document.select(".tags").map { it.text().trim().removePrefix("#").trim() }
+        val synopsis = document.selectFirst("#simple-des")?.text()
+        val attr = board.selectFirst(">.col-md-3>div")
+        val posterUrl = fixUrlNull(
+            Regex("image:url\\((.*)\\)").find(attr?.attr("style") ?: "")?.groupValues?.get(1)
+        )
+
         return newStreamResponse(
-            name = board.selectFirst("div>h1")!!.text(),
+            name = novelName,
             url = url,
-            data = document.select(".item-box").filter { select ->
-                select.selectFirst("div>svg") == null
-            }.map { select ->
-                newChapterData(
-                    name = select.selectFirst("div>span.c_title")!!.text(),
-                    url = "$prefix${regex.find(select.attr("onclick"))!!.groupValues[1]}.html"
-                )
-            }) {
-            val info = document.select("#views_info>div")
-            views = info[1].text().trim().removeSuffix("Views").trimEnd().toIntOrNull()
-            author = info[3].text()
-            rating = document.select(".comic-score>span").getOrNull(1)?.text()?.toFloatOrNull()
-                ?.times(1000.0 / 5.0)?.roundToInt()
-            peopleVoted = document.selectFirst("#scoreCount")?.text()?.toIntOrNull()
-            tags = document.select(".tags").map { it.text().trim().removePrefix("#").trim() }
-            synopsis = document.selectFirst("#simple-des")?.text()
-            val attr = board.selectFirst(">.col-md-3>div")
-            posterUrl =
-                fixUrlNull(
-                    Regex("image:url\\((.*)\\)").find(
-                        attr?.attr("style") ?: ""
-                    )?.groupValues?.get(1)
-                )
+            data = chapters
+        ) {
+            this.views = views
+            this.author = author
+            this.rating = rating
+            this.peopleVoted = peopleVoted
+            this.tags = tags
+            this.synopsis = synopsis
+            this.posterUrl = posterUrl
         }
     }
 
     override suspend fun loadHtml(url: String): String? {
         val document = app.get(url).document
-        val count = document.selectFirst("#countdown")
-        if (count != null) {
-            throw ErrorLoadingException("Not released, time until released ${count.text()}")
+        val countdown = document.selectFirst("#countdown")
+        if (countdown != null) {
+            throw ErrorLoadingException("Not released, time until released ${countdown.text()}")
         }
-        val html = document.selectFirst("#chapter_item")!!.html()
-        return html
+        val html = document.selectFirst("#chapter_item")?.html() ?: throw ErrorLoadingException("No chapter found.")
+
+        // Limpieza básica para evitar enlaces/promos indeseados
+        val blockPatterns = listOf("pawread", "tinyurl", "bit.ly")
+        val cleanedHtml = html.lines().filterNot { line ->
+            blockPatterns.any { pattern -> line.contains(pattern, ignoreCase = true) }
+        }.joinToString("\n")
+        return cleanedHtml
     }
 }
