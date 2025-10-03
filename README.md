@@ -35,6 +35,7 @@ Adfree FOSS Android app for downloading novels. It also functions as an Epub rea
 - https://www.webnovel.com/stories/fanfic
 - https://novelfire.net
 - https://www.wuxiabox.com
+- https://arcanetranslations.com
 
 **Screenshoots:**
 

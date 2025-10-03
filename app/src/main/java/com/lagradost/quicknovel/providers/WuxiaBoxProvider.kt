@@ -17,7 +17,7 @@ import com.lagradost.quicknovel.setStatus
 
 class WuxiaBoxProvider :  MainAPI() {
     override val name = "WuxiaBox"
-    override val mainUrl = "https://www.wuxiabox.com/"
+    override val mainUrl = "https://www.wuxiabox.com"
     override val iconId = R.drawable.icon_wuxiabox
 
     override val hasMainPage = true
@@ -100,7 +100,7 @@ class WuxiaBoxProvider :  MainAPI() {
             p--;
         }
         val url = "$mainUrl/list/${tag}/${mainCategory}-${orderBy}-${p}.html"
-        val document = app.get(url).document
+        val document = app.get(url, timeout = 60).document
 
         return HeadMainPageResponse(
             url,
@@ -243,7 +243,7 @@ class WuxiaBoxProvider :  MainAPI() {
 
         while (true) {
             val url = "$mainUrl/e/search/result/index.php?page=$currentPage&searchid=$searchId"
-            val document = app.get(url).document
+            val document = app.get(url, timeout = 60).document
 
             val pageResults = document.select("li.novel-item").mapNotNull { element ->
                 val node = element.selectFirst("a[title]") ?: return@mapNotNull null

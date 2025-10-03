@@ -11,6 +11,7 @@ import com.lagradost.quicknovel.SearchResponse
 import com.lagradost.quicknovel.StreamResponse
 import com.lagradost.quicknovel.providers.AllNovelProvider
 import com.lagradost.quicknovel.providers.AnnasArchive
+import com.lagradost.quicknovel.providers.ArcaneTranslationsProvider
 import com.lagradost.quicknovel.providers.BestLightNovelProvider
 import com.lagradost.quicknovel.providers.FreewebnovelProvider
 import com.lagradost.quicknovel.providers.GraycityProvider
@@ -41,51 +42,41 @@ import com.lagradost.quicknovel.util.Coroutines.ioSafe
 class Apis {
     companion object {
         val apis: List<MainAPI> = arrayOf(
-            //AllProvider(),
-//            NovelPassionProvider(), // Site gone
+
             BestLightNovelProvider(),
-//            WuxiaWorldOnlineProvider(), // Site does not work
+
             RoyalRoadProvider(),
             HiraethTranslationProvider(),
             LibReadProvider(),
             FreewebnovelProvider(),
-            //AzynovelProvider(), // dont exist anymore
+
             ReadfromnetProvider(),
             AllNovelProvider(),
-            //RanobesProvider(), // custom capcha
+
             NovelFullProvider(),
             NovelBinProvider(),
-            //MNovelFreeProvider(), // same as NovelFullVipProvider
-            //EngNovelProvider(),
+
             NovelsOnlineProvider(),
-            //EfremnetProvider(), // domain is expired
+
             GraycityProvider(),
-            MtlNovelProvider(),
+//            MtlNovelProvider(),
 
             AnnasArchive(),
-
-            // chapter captcha
-//            WuxiaWorldSiteProvider(),
-            //ReadLightNovelProvider(), // NOT WORKING?
-            //BoxNovelProvider(),
-            // ComrademaoProvider(), // domain sold/down?
-//            LightNovelPubProvider(), // Got cloudflare, but probably bypassable
             ReadNovelFullProvider(),
             ScribblehubProvider(),
             KolNovelProvider(),
-            //RewayatArProvider(), // removed url
-//            ReadAnyBookProvider(), // Books locked behind login
             MeioNovelProvider(),
             MoreNovelProvider(), // cloudflare?
             IndoWebNovelProvider(),
             SakuraNovelProvider(), // cloudflare?
-            // WattpadProvider(), // they have randomized the css classes
+
             WtrLabProvider(),
             PawReadProver(),
             MVLEmpyrProvider(),
             WebnovelFanficProvider(),
             NovelFireProvider(),
-            WuxiaBoxProvider()
+            WuxiaBoxProvider(),
+            ArcaneTranslationsProvider()
         ).sortedBy { it.name }
 
         fun getApiFromName(name: String): APIRepository {

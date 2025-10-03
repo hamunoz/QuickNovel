@@ -1,6 +1,7 @@
 package com.lagradost.quicknovel.ui.download
 
 import android.animation.ObjectAnimator
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
@@ -119,6 +120,7 @@ class AnyAdapter(
 
             is DownloadResultGridBinding -> {
                 when (item) {
+
                     is DownloadFragment.DownloadDataLoaded -> {
                         view.apply {
                             backgroundCard.apply {
@@ -157,6 +159,16 @@ class AnyAdapter(
                             imageTextMore.isVisible = diff > 0 && !showDownloadLoading
                             imageText.text = item.name
                             imageView.setImage(item.image, fadeIn = false, skipCache = false)
+                            val chapterCount = item.downloadedCount
+                            if (chapterCount>0)
+                            {
+                                chapterCountOverlay.isVisible = true
+                                chapterCountOverlay.text = "${chapterCount} / ${item.downloadedTotal}"
+                            }
+                            else
+                            {
+                                chapterCountOverlay.isVisible = false
+                            }
                         }
                     }
 
@@ -182,6 +194,27 @@ class AnyAdapter(
                                 skipCache = false
                             ) // skipCache = false
                             imageText.text = item.name
+
+                            val chapterCountStr = item.totalChapterCount
+                            if (!chapterCountStr.isNullOrBlank())
+                            {
+                                val chapterCount = chapterCountStr.toIntOrNull()
+
+                                chapterCountOverlay.isVisible = true
+                                chapterCountOverlay.text = if (chapterCount != null && chapterCount > 0) {
+                                    "$chapterCount ch"
+                                }
+                                else {
+                                    if(chapterCount==0){
+                                        chapterCountOverlay.isVisible = false
+                                    }
+                                    "$chapterCountStr ch" // fallback to string like "V5 46"
+                                }
+                            }
+                            else
+                            {
+                                chapterCountOverlay.isVisible = false
+                            }
                             imageTextMore.isVisible = false
                         }
                     }
