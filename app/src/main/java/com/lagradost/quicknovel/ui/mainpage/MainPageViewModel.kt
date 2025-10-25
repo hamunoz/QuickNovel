@@ -49,6 +49,9 @@ class MainPageViewModel : ViewModel() {
     val currentTag: MutableLiveData<Int> by lazy {
         MutableLiveData<Int>(null)
     }
+    val currentChapterCountFilter: MutableLiveData<Int> by lazy {
+        MutableLiveData<Int>(null)
+    }
 
     val loadingMoreItems: MutableLiveData<Boolean> by lazy {
         MutableLiveData<Boolean>(false)
@@ -128,6 +131,7 @@ class MainPageViewModel : ViewModel() {
         mainCategory: Int?,
         orderBy: Int?,
         tag: Int?,
+        chapterCountFilter:Int?=null,
     ) {
         val cPage = page ?: ((currentPage.value ?: 0) + 1)
         if (cPage == 0) {
@@ -179,6 +183,7 @@ class MainPageViewModel : ViewModel() {
             currentTag.postValue(tag)
             currentOrderBy.postValue(orderBy)
             currentMainCategory.postValue(mainCategory)
+            currentChapterCountFilter.postValue(chapterCountFilter)
         }
     }
 }

@@ -18,6 +18,9 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.lagradost.quicknovel.LibraryHelper
+import com.lagradost.quicknovel.LibraryHelper.getChapterFiltersList
+import com.lagradost.quicknovel.MainAPI
 import com.lagradost.quicknovel.R
 import com.lagradost.quicknovel.databinding.FilterBottomSheetBinding
 import com.lagradost.quicknovel.databinding.FragmentMainpageBinding
@@ -176,7 +179,7 @@ class MainPageFragment : Fragment() {
                                     null,
                                     viewModel.currentMainCategory.value,
                                     viewModel.currentOrderBy.value,
-                                    viewModel.currentTag.value
+                                    viewModel.currentTag.value,
                                 )
                             }
                         }
@@ -238,10 +241,19 @@ class MainPageFragment : Fragment() {
             if (!api.hasMainPage) {
                 return@setOnClickListener
             }
+            android.util.Log.d("FABDebug", "FAB clicked!")
 
             val bottomSheetDialog = BottomSheetDialog(requireContext())
             val binding = FilterBottomSheetBinding.inflate(layoutInflater, null, false)
             bottomSheetDialog.setContentView(binding.root)
+
+            val provider = viewModel.api.api
+            if(provider.isChapterCountFilterNeeded)
+            {
+                binding.filterChapterCountText.isVisible=true
+                binding.filterChapterCountSpinner.isVisible=true
+                viewModel.currentChapterCountFilter.value=provider.ChapterFilter.ordinal
+            }
 
             fun setUp(
                 data: List<Pair<String, String>>,
@@ -276,6 +288,8 @@ class MainPageFragment : Fragment() {
                 )
                 setUp(api.tags, filterTagText, filterTagSpinner, viewModel.currentTag.value)
 
+                setUp(getChapterFiltersList(),filterChapterCountText,filterChapterCountSpinner,viewModel.currentChapterCountFilter.value)
+
                 filterButton.setOnClickListener {
                     fun getId(spinner: Spinner): Int? {
                         return if (spinner.isVisible) spinner.selectedItemPosition else null
@@ -284,9 +298,12 @@ class MainPageFragment : Fragment() {
                     val generalId = getId(filterGeneralSpinner)
                     val orderId = getId(filterOrderSpinner)
                     val tagId = getId(filterTagSpinner)
+                    val chapterFilterID=getId(filterChapterCountSpinner)
                     isLoading = true
 
-                    viewModel.load(0, generalId, orderId, tagId)
+                    viewModel.load(0, generalId, orderId, tagId,chapterFilterID)
+
+                    provider.ChapterFilter= LibraryHelper.ChapterCountFilter.values()[chapterFilterID?:0]
 
                     bottomSheetDialog.dismiss()
                 }

@@ -1,21 +1,13 @@
 package com.lagradost.quicknovel.providers
 
 import android.util.Log
-import android.view.View
 import com.lagradost.quicknovel.*
 import com.lagradost.quicknovel.MainActivity.Companion.app
-import com.lagradost.quicknovel.MainActivity.Companion.context
 import org.json.JSONArray
 import org.json.JSONObject
 import org.jsoup.Jsoup
 import java.io.File
 import kotlin.math.log10
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import android.widget.Spinner
-import android.widget.TextView
-import com.lagradost.quicknovel.ui.mainpage.MainPageViewModel
 
 private val tagCache = mutableMapOf<Int, Long>()
 
@@ -301,19 +293,31 @@ class MVLEmpyrProvider : MainAPI() {
         // Fetch only once when fullNovelList is empty
         ensureFullNovelListLoaded()
 
-
+        isChapterCountFilterNeeded=true
 
         // Use the enhanced sorting and filtering function
         val sortedItems = sortAndFilterNovels(fullNovelList, orderBy, mainCategory, tag)
 
-        val pagedItems = sortedItems.drop((page - 1) * itemsPerPage).take(itemsPerPage)
+        val myFilteredItems=sortedItems.mapNotNull { item->
+            val chapterCount=item["total-chapters"].toString()
+            if(!LibraryHelper.isChapterCountInRange(ChapterFilter,chapterCount))
+            {
+                return@mapNotNull null
+            }
+            else{
+                item
+            }
+        }
+
+        val pagedItems = myFilteredItems.drop((page - 1) * itemsPerPage).take(itemsPerPage)
 
         val items = pagedItems.mapNotNull { item ->
+
+            val chapterCount=item["total-chapters"].toString()
             val name = item["name"] as? String ?: return@mapNotNull null
             val slug = item["slug"] as? String ?: return@mapNotNull null
             val novelCode = (item["novel-code"] as? Number)?.toInt() ?: return@mapNotNull null
             val coverUrl = "https://assets.mvlempyr.app/images/300/${novelCode}.webp"
-            val chapterCount=item["total-chapters"].toString()
             val link=fixUrlNull("/novel/$slug")?: return@mapNotNull null
 
             newSearchResponse(name, link) {

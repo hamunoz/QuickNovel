@@ -43,7 +43,7 @@ class Apis {
     companion object {
         val apis: List<MainAPI> = arrayOf(
 
-            BestLightNovelProvider(),
+            //BestLightNovelProvider(),
 
             RoyalRoadProvider(),
             HiraethTranslationProvider(),

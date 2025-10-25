@@ -59,6 +59,8 @@ class WebnovelFanficProvider : MainAPI() {
 
         ensureCookiesLoaded()
 
+        isChapterCountFilterNeeded=true
+
         val slug = tag ?: "fanfic"
         val categoryId = getCategoryIdFromTag(slug)
         var apiUrl = "$mainUrl/go/pcm/category/categoryPage?_csrfToken=$cachedCsrfToken&language=en&categoryId=$categoryId&categoryType=4&orderBy=3&pageIndex=$page"
@@ -85,13 +87,20 @@ class WebnovelFanficProvider : MainAPI() {
             for (i in 0 until ItemLIst.length()) {
 
                 val book = ItemLIst.getJSONObject(i)
+                val chapterCount=book.optString("chapterNum","0")
+
+                if(!LibraryHelper.isChapterCountInRange(ChapterFilter,chapterCount.toString()))
+                {
+                    continue
+                }
 
                 val id = book.optString("bookId") ?: continue
                 val title = book.optString("bookName", "Untitled") // fallback title)
                 val cover = "https://book-pic.webnovel.com/bookcover/$id?imageMogr2/thumbnail/180x|imageMogr2/format/webp|imageMogr2/quality/70!"
 
                 val link = fixUrlNull("$mainUrl/book/$id")
-                val chapterCount=book.optString("chapterNum","0")
+
+
 
                 results.add(newSearchResponse(title, link ?: continue) {
                     this.posterUrl = cover;
@@ -119,7 +128,6 @@ class WebnovelFanficProvider : MainAPI() {
             isLastPage = nextPage.second
             pageIndex++
         }
-
         return allResults
     }
 
@@ -151,12 +159,11 @@ class WebnovelFanficProvider : MainAPI() {
             val link = "$mainUrl/book/$id"
             val chapterCount=book.optString("chapterNum","0")
 
-
-
-            results.add(newSearchResponse(title, fixUrl(link)) {
+            results.add( newSearchResponse(title, fixUrl(link)) {
                 this.posterUrl = cover;
                 this.totalChapterCount=chapterCount
             })
+
         }
 
         val isLastPage = fanficData.optInt("isLast", 1) == 1

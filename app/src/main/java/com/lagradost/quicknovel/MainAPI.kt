@@ -2,14 +2,11 @@ package com.lagradost.quicknovel
 
 import androidx.annotation.StringRes
 import androidx.annotation.WorkerThread
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.nicehttp.NiceResponse
 import com.lagradost.quicknovel.MainActivity.Companion.app
 import com.lagradost.quicknovel.mvvm.logError
-import com.lagradost.quicknovel.ui.ReadType
 import com.lagradost.quicknovel.ui.UiImage
 import com.lagradost.quicknovel.ui.img
-import io.reactivex.internal.operators.maybe.MaybeCount
 import kotlinx.coroutines.sync.Mutex
 import org.jsoup.Jsoup
 
@@ -25,6 +22,10 @@ abstract class MainAPI {
     open val rateLimitTime: Long = 0
     val hasRateLimit: Boolean get() = rateLimitTime > 0L
     val rateLimitMutex: Mutex = Mutex()
+
+
+    open var isChapterCountFilterNeeded=false
+    open var ChapterFilter=LibraryHelper.ChapterCountFilter.ALL
 
     open val usesCloudFlareKiller = false
 
@@ -203,6 +204,8 @@ fun MainAPI.newSearchResponse(
 
     return builder
 }
+
+
 
 enum class ReleaseStatus(@StringRes val resource: Int) {
     Ongoing(R.string.ongoing),

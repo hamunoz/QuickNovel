@@ -98,5 +98,26 @@ object LibraryHelper {
     }
 
 
-
+    enum class ChapterCountFilter(val displayName: String) {
+        ALL("all"),
+        LESS_THAN_100("<100"),
+        GREATER_EQUAL_100(">100"),
+        GREATER_EQUAL_250(">250"),
+        GREATER_EQUAL_500(">500"),
+        GREATER_EQUAL_1000(">1000")
+    }
+    fun getChapterFiltersList(): List<Pair<String, String>> {
+        return ChapterCountFilter.values().map { it.displayName to it.name }
+    }
+    fun isChapterCountInRange(filter: ChapterCountFilter, countString: String): Boolean {
+        val count = countString.toIntOrNull() ?: 0
+        return when (filter) {
+            ChapterCountFilter.ALL -> true
+            ChapterCountFilter.LESS_THAN_100 -> count < 100
+            ChapterCountFilter.GREATER_EQUAL_100 -> count >= 100
+            ChapterCountFilter.GREATER_EQUAL_250 -> count >= 250
+            ChapterCountFilter.GREATER_EQUAL_500 -> count >= 500
+            ChapterCountFilter.GREATER_EQUAL_1000 -> count >= 1000
+        }
+    }
 }
