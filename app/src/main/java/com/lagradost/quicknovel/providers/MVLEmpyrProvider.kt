@@ -1,12 +1,21 @@
 package com.lagradost.quicknovel.providers
 
 import android.util.Log
+import android.view.View
 import com.lagradost.quicknovel.*
 import com.lagradost.quicknovel.MainActivity.Companion.app
+import com.lagradost.quicknovel.MainActivity.Companion.context
 import org.json.JSONArray
 import org.json.JSONObject
 import org.jsoup.Jsoup
 import java.io.File
+import kotlin.math.log10
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.widget.Spinner
+import android.widget.TextView
+import com.lagradost.quicknovel.ui.mainpage.MainPageViewModel
 
 private val tagCache = mutableMapOf<Int, Long>()
 
@@ -85,6 +94,53 @@ class MVLEmpyrProvider : MainAPI() {
         "Average Rating" to "rating",
         "Most Reviewed" to "reviews"
     )
+
+    override val tags = listOf(
+        "All" to "all",
+        "Action" to "action",
+        "Adult" to "adult",
+        "Adventure" to "adventure",
+        "Comedy" to "comedy",
+        "Drama" to "drama",
+        "Ecchi" to "ecchi",
+        "Fan-Fiction" to "fan-fiction",
+        "Fantasy" to "fantasy",
+        "Gender Bender" to "gender-bender",
+        "Harem" to "harem",
+        "Historical" to "historical",
+        "Horror" to "horror",
+        "Josei" to "josei",
+        "Martial Arts" to "martial-arts",
+        "Mature" to "mature",
+        "Mecha" to "mecha",
+        "Mystery" to "mystery",
+        "Psychological" to "psychological",
+        "Romance" to "romance",
+        "School Life" to "school-life",
+        "Sci-fi" to "sci-fi",
+        "Seinen" to "seinen",
+        "Shoujo" to "shoujo",
+        "Shounen" to "shounen",
+        "Shounen Ai" to "shounen-ai",
+        "Slice of Life" to "slice-of-life",
+        "Smut" to "smut",
+        "Sports" to "sports",
+        "Supernatural" to "supernatural",
+        "Tragedy" to "tragedy",
+        "Wuxia" to "wuxia",
+        "Xianxia" to "xianxia",
+        "Xuanhuan" to "xuanhuan",
+        "Yaoi" to "yaoi",
+        "Yuri" to "yuri"
+    )
+    override val mainCategories = listOf(
+        "All" to "All",
+        "Ongoing" to "Ongoing",
+        "Completed" to "Completed",
+        "Hiatus" to "Hiatus"
+    )
+
+
     fun saveFullNovelListCache(list: List<Map<String, Any>>) {
         val jsonArray = JSONArray()
         for (item in list) {
@@ -125,11 +181,11 @@ class MVLEmpyrProvider : MainAPI() {
         if (fullNovelList.isNotEmpty()) return
 
         if (isCacheValid()) {
-            Log.d("MVLEmpyrProvider", "Loading fullNovelList from cache")
+            //Log.d("MVLEmpyrProvider", "Loading fullNovelList from cache")
             fullNovelList = loadFullNovelListCache()
         } else {
-            Log.d("MVLEmpyrProvider", "Fetching fullNovelList from API")
-            Log.d("MVLEmpyrProvider", "${apiUrl}per_page=10000")
+            // Log.d("MVLEmpyrProvider", "Fetching fullNovelList from API")
+            // Log.d("MVLEmpyrProvider", "${apiUrl}per_page=10000")
             val response = app.get("${apiUrl}per_page=10000", timeout = 60).body.string()
             fullNovelList = parseJsonArray(response)
             saveFullNovelListCache(fullNovelList)
@@ -137,6 +193,101 @@ class MVLEmpyrProvider : MainAPI() {
         //Log.d("MVLEmpyrProvider","${fullNovelList.size}")
     }
 
+
+    // Enhanced sorting and filtering function with detailed logs
+    fun sortAndFilterNovels(
+        fullNovelList: List<Map<String, Any>>,
+        orderBy: String?,
+        status: String?,  // mainCategory is status
+        genre: String?    // tag is actually genre
+    ): List<Map<String, Any>> {
+
+        //Log.d("NovelSortFilter", "---- sortAndFilterNovels START ----")
+        //Log.d("NovelSortFilter", "Input list size: ${fullNovelList.size}")
+        //Log.d("NovelSortFilter", "Parameters -> orderBy=$orderBy, status=$status, genre=$genre")
+
+        // First, filter based on status and genre
+        val filteredList = fullNovelList.filter { novel ->
+            var matches = true
+
+            // Status filtering
+            if (!status.isNullOrEmpty()&& !status.equals("All", ignoreCase = true)) {
+                val novelStatus = novel["status"] as? String ?: ""
+                val matchStatus = novelStatus.equals(status, ignoreCase = true)
+                if (!matchStatus) {
+                    matches = false
+                }
+                // Log.d("NovelSortFilter", "Status check: novel='${novel["name"]}' -> $novelStatus vs $status = $matchStatus")
+            }
+
+            // Genre filtering
+            if (!genre.isNullOrEmpty() && !genre.equals("all", ignoreCase = true) && matches) {
+                val genreObj = novel["genre"]
+                val genres: List<String> = when (genreObj) {
+                    is List<*> -> genreObj.filterIsInstance<String>()
+                    is JSONArray -> List(genreObj.length()) { i -> genreObj.optString(i) }
+                    is String -> genreObj.split(",", "·", ";").map { it.trim() }
+                    else -> emptyList()
+                }
+
+                val matchGenre = genres.any { it.equals(genre, ignoreCase = true) }
+                if (!matchGenre) {
+                    matches = false
+                }
+
+                // Log.d("NovelSortFilter","Genre check: novel='${novel["name"]}' -> ${genres.joinToString()} vs $genre = $matchGenre")
+            }
+
+            matches
+        }
+
+        //Log.d("NovelSortFilter", "Filtered list size: ${filteredList.size}")
+
+        // Then sort based on orderBy parameter
+        val sortedList = when (orderBy) {
+            "new" -> filteredList.sortedByDescending {
+                it["createdOn"] as? String
+            }
+            "chapters_desc" -> filteredList.sortedByDescending {
+                (it["total-chapters"] as? Number)?.toInt() ?: 0
+            }
+            "chapters_asc" -> filteredList.sortedBy {
+                (it["total-chapters"] as? Number)?.toInt() ?: 0
+            }
+            "rating" -> filteredList.sortedByDescending { novel ->
+                val rating = (novel["average-review"] as? Number)?.toDouble() ?: 0.0
+                val reviews = (novel["total-reviews"] as? Number)?.toInt() ?: 0
+                rating * log10(reviews + 1.0)
+            }
+            "reviews" -> filteredList.sortedByDescending {
+                (it["total-reviews"] as? Number)?.toInt() ?: 0
+            }
+            "rank" -> filteredList.sortedBy {
+                (it["rank"] as? Number)?.toInt() ?: Int.MAX_VALUE
+            }
+            "weekly_rank" -> filteredList.sortedBy {
+                (it["weekly-rank"] as? Number)?.toInt() ?: Int.MAX_VALUE
+            }
+            "monthly_rank" -> filteredList.sortedBy {
+                (it["monthly-rank"] as? Number)?.toInt() ?: Int.MAX_VALUE
+            }
+            "name_asc" -> filteredList.sortedBy {
+                it["name"] as? String ?: ""
+            }
+            "name_desc" -> filteredList.sortedByDescending {
+                it["name"] as? String ?: ""
+            }
+            else -> filteredList
+        }
+
+        Log.d("NovelSortFilter", "Full list size: ${fullNovelList.size}  Sorted list size: ${sortedList.size}")
+//        if (sortedList.isNotEmpty()) {
+//            Log.d("NovelSortFilter", "First item after sort: ${sortedList.first()["name"]}")
+//        }
+        // Log.d("NovelSortFilter", "---- sortAndFilterNovels END ----")
+
+        return sortedList
+    }
 
 
     override suspend fun loadMainPage(
@@ -148,17 +299,12 @@ class MVLEmpyrProvider : MainAPI() {
         val itemsPerPage = 30
 
         // Fetch only once when fullNovelList is empty
-        ensureFullNovelListLoaded();
+        ensureFullNovelListLoaded()
 
 
-        val sortedItems = when (orderBy) {
-            "new" -> fullNovelList.sortedByDescending { it["createdOn"] as? String }
-            "chapters_desc" -> fullNovelList.sortedByDescending { (it["total-chapters"] as? Number)?.toInt() ?: 0 }
-            "chapters_asc" -> fullNovelList.sortedBy { (it["total-chapters"] as? Number)?.toInt() ?: 0 }
-            "rating" -> fullNovelList.sortedByDescending { (it["average-review"] as? Number)?.toDouble() ?: 0.0 }
-            "reviews" -> fullNovelList.sortedByDescending { (it["total-reviews"] as? Number)?.toInt() ?: 0 }
-            else -> fullNovelList
-        }
+
+        // Use the enhanced sorting and filtering function
+        val sortedItems = sortAndFilterNovels(fullNovelList, orderBy, mainCategory, tag)
 
         val pagedItems = sortedItems.drop((page - 1) * itemsPerPage).take(itemsPerPage)
 
@@ -346,7 +492,7 @@ class MVLEmpyrProvider : MainAPI() {
             val content = ContentElement?.html()
 
             if (content != null) {
-               // Log.d("MVLEmpyrProvider", "Chapter Content Loaded Successfully from Primary URL")
+                // Log.d("MVLEmpyrProvider", "Chapter Content Loaded Successfully from Primary URL")
                 chapterContentCache[url] = content
                 return content
             } else {
