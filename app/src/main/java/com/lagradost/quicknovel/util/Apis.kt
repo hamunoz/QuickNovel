@@ -36,6 +36,7 @@ import com.lagradost.quicknovel.providers.SakuraNovelProvider
 import com.lagradost.quicknovel.providers.ScribblehubProvider
 import com.lagradost.quicknovel.providers.WebnovelFanficProvider
 import com.lagradost.quicknovel.providers.WtrLabProvider
+import com.lagradost.quicknovel.providers.SkyNovelsProvider
 import com.lagradost.quicknovel.providers.WuxiaBoxProvider
 import com.lagradost.quicknovel.util.Coroutines.ioSafe
 
@@ -76,6 +77,7 @@ class Apis {
             WebnovelFanficProvider(),
             NovelFireProvider(),
             WuxiaBoxProvider(),
+            SkyNovelsProvider(),
             ArcaneTranslationsProvider()
         ).sortedBy { it.name }
 
