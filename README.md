@@ -41,7 +41,7 @@ Adfree FOSS Android app for downloading novels. It also functions as an Epub rea
 
 **Screenshoots:**
 
-<img src="./.github/home.jpg" height="400"/><img src="./.github/search.jpg" height="400"/><img src="./.github/downloads.jpg" height="400"/><img src="./.github/result.jpg" height="400"/><img src="./.github/reader.jpg" height="400"/>
+<img src="./.github/L.jpg" height="400"/><img src="./.github/R.jpg" height="400"/><img src="./.github/H.jpg" height="400"/><img src="./.github/N.jpg" height="400"/><img src="./.github/NS.jpg" height="400"/><img src="./.github/S.jpg" height="400"/>
 
 **Legal notice:**
 
