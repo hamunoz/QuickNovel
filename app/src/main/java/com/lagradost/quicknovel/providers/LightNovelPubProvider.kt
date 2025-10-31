@@ -15,11 +15,7 @@ import com.lagradost.quicknovel.newSearchResponse
 import com.lagradost.quicknovel.newStreamResponse
 import com.lagradost.quicknovel.setStatus
 
-/**
- * Provider para https://lightnovelstranslations.com/
- * Adaptado de lightnoveltranslation.js y reescrito en Kotlin
- * usando la estructura de WuxiaBoxProvider.
- */
+
 class LightNovelTranslationsProvider : MainAPI() {
     override val name = "Light Novel Translations"
     override val mainUrl = "https://lightnovelstranslations.com/"
