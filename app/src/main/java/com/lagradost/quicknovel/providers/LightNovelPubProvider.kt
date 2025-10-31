@@ -1,215 +1,162 @@
 package com.lagradost.quicknovel.providers
 
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.lagradost.quicknovel.*
-import com.lagradost.quicknovel.DataStore.toKotlinObject
+import android.util.Log
+import com.lagradost.quicknovel.ChapterData
+import com.lagradost.quicknovel.HeadMainPageResponse
+import com.lagradost.quicknovel.LoadResponse
+import com.lagradost.quicknovel.MainAPI
 import com.lagradost.quicknovel.MainActivity.Companion.app
-import kotlinx.coroutines.delay
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
-import java.util.*
-/*
-class LightNovelPubProvider : MainAPI() {
-    override val name = "LightNovelPub"
-    override val mainUrl = "https://www.lightnovelpub.com"
-    override val rateLimitTime: Long = 5000
+import com.lagradost.quicknovel.R
+import com.lagradost.quicknovel.SearchResponse
+import com.lagradost.quicknovel.fixUrl
+import com.lagradost.quicknovel.fixUrlNull
+import com.lagradost.quicknovel.newChapterData
+import com.lagradost.quicknovel.newSearchResponse
+import com.lagradost.quicknovel.newStreamResponse
+import com.lagradost.quicknovel.setStatus
 
-    data class SearchRoot(
-        @JsonProperty("\$id")
-        val id: String,
-        val success: Boolean,
-        val resultview: String,
+/**
+ * Provider para https://lightnovelstranslations.com/
+ * Adaptado de lightnoveltranslation.js y reescrito en Kotlin
+ * usando la estructura de WuxiaBoxProvider.
+ */
+class LightNovelTranslationsProvider : MainAPI() {
+    override val name = "Light Novel Translations"
+    override val mainUrl = "https://lightnovelstranslations.com/"
+    // override val iconId = R.drawable.icon_book
+
+    override val hasMainPage = false
+
+    // Permite elegir orden y estado de la novela en la UI
+    override val mainCategories = listOf(
+        "Most Liked" to "most-liked",
+        "Most Recent" to "most-recent"
     )
 
-    override suspend fun loadHtml(url: String): String? { // THEY RATE LIMIT THE FUCK ON THIS PROVIDER
-        val response = app.get(url)
-        val document = Jsoup.parse(response.text)
-        val items = document.selectFirst("div#chapter-container") ?: return null
-        // THEY HAVE SHIT LIKE " <p class="kyzywl">The source of this content is lightnovelpub[.]com</p> " random class, no normal text has a class
-        for (i in items.allElements) {
-            if (i.tagName() == "p" && i.classNames().size > 0 && i.text()
-                    .contains("lightnovelpub")
-            ) {
-                i.remove()
-            }
-        }
-        return items.html()
-    }
-
-    private fun getChaps(document: Document): List<OrderedChapterData> {
-        return document.select("ul.chapter-list > li").mapNotNull { parseChap(it) }
-    }
-
-    data class OrderedChapterData(
-        val name: String,
-        val url: String,
-        val dateOfRelease: String?,
-        val orderno: Int,
+    override val tags = listOf(
+        "All" to "all",
+        "Ongoing" to "ongoing",
+        "Completed" to "completed"
     )
 
-    private fun parseChap(element: Element): OrderedChapterData? {
-        val orderNum = element.attr("data-orderno").toInt()
-        val a = element.selectFirst("> a")
-        val href = fixUrl(a?.attr("href") ?: return null)
-        val title = a.selectFirst("> strong.chapter-title")?.text()
-        val time = a.selectFirst("> time.chapter-update")?.text() // attr datetime
-        return OrderedChapterData(title ?: return null, href, time, orderNum)
+    override val orderBys = emptyList<Pair<String, String>>()
+
+    private fun log(tag: String, msg: String) =
+        Log.d("LightNovelTranslations-$tag", msg)
+
+    private suspend fun fetchDocument(url: String) = app.get(url).document
+
+    /** Página principal con soporte para categorías y tags */
+    override suspend fun loadMainPage(
+        page: Int,
+        mainCategory: String?,
+        orderBy: String?,
+        tag: String?
+    ): HeadMainPageResponse {
+        val category = mainCategory ?: "most-liked"
+        val statusFilter = when (tag) {
+            "ongoing" -> "&status=Ongoing"
+            "completed" -> "&status=Completed"
+            else -> ""
+        }
+
+        val url = "$mainUrl/read/page/$page?sortby=$category$statusFilter"
+        log("loadMainPage", "Requesting $url")
+
+        val document = fetchDocument(url)
+        val novels = document.select("div.read_list-story-item").mapNotNull { el ->
+            val link = el.selectFirst(".item_thumb a") ?: return@mapNotNull null
+            val img = el.selectFirst(".item_thumb img")?.attr("src")
+            val title = link.attr("title").orEmpty()
+            val href = link.attr("href").orEmpty()
+
+            newSearchResponse(name = title, url = href) {
+                posterUrl = fixUrlNull(img)
+            }
+        }
+
+        return HeadMainPageResponse(url, novels)
     }
 
-    override suspend fun load(url: String): LoadResponse? {
-        val response = app.get(url)
-        val document = Jsoup.parse(response.text)
-        val poster = document.selectFirst("div.fixed-img > figure.cover > img")?.attr("data-src")
-        val novelInfo = document.selectFirst("div.header-body > div.novel-info")
-        val mainHead = novelInfo?.selectFirst("> div.main-head")
+    /** Carga información de la novela y lista de capítulos */
+    override suspend fun load(url: String): LoadResponse {
+        log("load", "Loading novel $url")
+        val document = fetchDocument(url)
 
-        val title = mainHead?.selectFirst("> h1.novel-title")?.text() ?: return null
-        val author = mainHead.selectFirst("> div.author > a > span")?.text()
-        val rating =
-            mainHead.selectFirst("> div.rating > div.rating-star > p > strong")?.text()
-                ?.toFloatOrNull()?.times(200)
-                ?.toInt()
+        val title = document.selectFirst("div.novel_title h3")?.text()?.trim().orEmpty()
+        val author = document.selectFirst("div.novel_detail_info li:contains(Author)")
+            ?.text()?.trim().orEmpty()
+        val cover = document.selectFirst("div.novel-image img")?.attr("src")
+        val statusText = document.selectFirst("div.novel_status")?.text()?.trim()
 
-        val headerStats = novelInfo.select("> div.header-stats > span > strong")
-        val viewsText = headerStats.get(1)?.text()?.lowercase(Locale.getDefault())
-        val views = if (viewsText == null) null else {
-            val times =
-                when {
-                    viewsText.contains("m") -> {
-                        1000000
-                    }
-
-                    viewsText.contains("k") -> {
-                        1000
-                    }
-
-                    else -> 1
-                }
-            (viewsText.replace("m", "").replace("k", "").toFloat() * times).toInt()
+        val synopsis = try {
+            val body2 = fetchDocument(url.replace("?tab=table_contents", ""))
+            body2.selectFirst("div.novel_text p")?.text()?.trim().orEmpty()
+        } catch (e: Exception) {
+            ""
         }
 
-        val status = when (headerStats.get(3)?.text()) {
-            "Completed" -> 2
-            "Ongoing" -> 1
-            else -> 0
+        val status = when (statusText) {
+            "Ongoing" -> "Ongoing"
+            "Hiatus" -> "On Hiatus"
+            "Completed" -> "Completed"
+            else -> null
         }
 
-        val genres =
-            ArrayList(novelInfo.select("> div.categories > ul > li > a")?.map { it.text() }
-                ?: listOf())
-        val tags = ArrayList(document.select("> div.tags > ul.content > li > a")?.map { it.text() }
-            ?: listOf())
-        genres.addAll(tags)
-        val synopsis = document.selectFirst("div.summary > div.content")?.text()
+        val chapters = mutableListOf<ChapterData>()
+        document.select("li.chapter-item.unlock").forEach { li ->
+            val link = li.selectFirst("a") ?: return@forEach
+            val chapterTitle = link.text().trim()
+            val href = link.attr("href")
 
-        val chapsDocument = Jsoup.parse(app.get("$url/chapters").text)
-
-        val chaps = ArrayList(getChaps(chapsDocument))
-
-        val pgs = chapsDocument.select("ul.pagination > li > a")
-        val pages = pgs.mapNotNull {
-            "(.*?page-)([0-9]*)".toRegex().find(it.attr("href"))
-        }
-
-        var highestPage = 0
-        var link = ""
-        for (p in pages) {
-            val pageNumber = p.groupValues[2].toInt()
-            if (pageNumber > highestPage) {
-                highestPage = pageNumber
-                link = p.groupValues[1]
-            }
-        }
-        if (highestPage > 2) {
-            link = fixUrl(link)
-            val list = ArrayList<Pair<Int, String>>()
-            for (i in 2..highestPage) {
-                list.add(i - 2 to link + i)
-            }
-
-            val dataList =
-                list.map { // CANT PMAP DUE TO : This operation is rate limited.
-                    delay(1000)
-                    val localResponse = app.get(it.second)
-                    val localDocument = Jsoup.parse(localResponse.text)
-                    val localChaps = getChaps(localDocument)
-                    if (localChaps.isEmpty()) {
-                        throw Exception("No Chapters")
-                    }
-                    localChaps
-                }
-
-            for (i in dataList) {
-                chaps.addAll(i)
-            }
-
-        }
-        val data = chaps.sortedBy { it.orderno }
-            .map { ChapterData(it.name, it.url, it.dateOfRelease, null) }
-
-        return StreamResponse(
-            url,
-            title,
-            data,
-            author,
-            poster,
-            rating,
-            null,
-            views,
-            synopsis,
-            genres,
-            status
-        )
-    }
-
-    override suspend fun search(query: String): List<SearchResponse> {
-        val searchRequest = app.get("$mainUrl/search")
-        val searchToken = Jsoup.parse(searchRequest.text)
-            .select("input[name='__LNRequestVerifyToken']").`val`()
-
-        val url = "$mainUrl/lnsearchlive"
-        // This fuckery because sometimes khttp fails to get cookies as it only uses lowercase
-        val cookie =
-            Regex("""lncoreantifrg=.*?;""").find(searchRequest.headers.toString())?.groupValues?.get(
-                0
-            )
-        val response = app.post(
-            url,
-            data = mapOf("inputContent" to query),
-            headers = mapOf(
-                "LNRequestVerifyToken" to searchToken!!,
-                // Using cookies = searchRequest.cookies doesn't work
-                "cookie" to cookie!!
-            )
-        )
-        val parse = response.text.toKotlinObject<SearchRoot>()
-        val text = parse.resultview.replace("\\", "")
-
-        val document = Jsoup.parse(text)
-        val items = document.select("li.novel-item > a")
-        if (items.size <= 0) return ArrayList()
-        val returnValue: ArrayList<SearchResponse> = ArrayList()
-        for (item in items) {
-            val title = item?.attr("title") ?: continue
-            val href = item.attr("href") ?: continue
-            val poster = item.selectFirst("> div.cover-wrap > figure > img")?.attr("src")
-            val latestChap =
-                "Chapter " + item.select("> div.item-body > div.novel-stats > span").last()?.text()
-                    ?.replace("Chapters", "")
-
-            returnValue.add(
-                SearchResponse(
-                    title,
-                    fixUrl(href),
-                    poster,
-                    null,
-                    latestChap,
-                    this.name
+            chapters.add(
+                newChapterData(
+                    name = chapterTitle,
+                    url = href
                 )
             )
         }
 
-        return returnValue
+        return newStreamResponse(title, fixUrl(url), chapters) {
+            this.author = author
+            this.posterUrl = fixUrlNull(cover)
+            this.synopsis = synopsis
+            setStatus(status)
+        }
     }
-}*/
+
+    /** Carga el contenido del capítulo */
+    override suspend fun loadHtml(url: String): String? {
+        log("loadHtml", "Loading chapter $url")
+        return try {
+            val document = fetchDocument(url)
+            val content = document.selectFirst("div.text_story")
+            content?.select("div.ads_content")?.remove()
+            content?.html()
+        } catch (e: Exception) {
+            Log.e("LightNovelTranslations", "Failed to load chapter: ${e.message}")
+            null
+        }
+    }
+
+    /** Búsqueda de novelas por nombre */
+    override suspend fun search(query: String): List<SearchResponse> {
+        log("search", "Searching for $query")
+        if (query.isBlank()) return emptyList()
+
+        val formData = mapOf("field-search" to query)
+        val response = app.post("$mainUrl/read", data = formData)
+        val document = response.document
+
+        return document.select("div.read_list-story-item").mapNotNull { el ->
+            val link = el.selectFirst(".item_thumb a") ?: return@mapNotNull null
+            val img = el.selectFirst(".item_thumb img")?.attr("src")
+            val title = link.attr("title").orEmpty()
+            val href = link.attr("href").orEmpty()
+
+            newSearchResponse(title, href) {
+                posterUrl = fixUrlNull(img)
+            }
+        }
+    }
+}
