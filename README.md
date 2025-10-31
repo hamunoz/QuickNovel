@@ -37,6 +37,7 @@ Adfree FOSS Android app for downloading novels. It also functions as an Epub rea
 - https://www.wuxiabox.com
 - https://arcanetranslations.com
 - https://www.skynovels.net (test)
+- https://lightnovelstranslations.com (test)
 
 **Screenshoots:**
 
