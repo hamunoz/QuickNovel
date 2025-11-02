@@ -72,11 +72,12 @@ class Apis {
 
             WtrLabProvider(),
             PawReadProver(),
+
             MVLEmpyrProvider(),
             WebnovelFanficProvider(),
             NovelFireProvider(),
             WuxiaBoxProvider(),
-            ArcaneTranslationsProvider()
+            //ArcaneTranslationsProvider() //cloudflare
         ).sortedBy { it.name }
 
         fun getApiFromName(name: String): APIRepository {

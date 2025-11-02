@@ -20,7 +20,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.lagradost.quicknovel.LibraryHelper
 import com.lagradost.quicknovel.LibraryHelper.getChapterFiltersList
-import com.lagradost.quicknovel.MainAPI
 import com.lagradost.quicknovel.R
 import com.lagradost.quicknovel.databinding.FilterBottomSheetBinding
 import com.lagradost.quicknovel.databinding.FragmentMainpageBinding
@@ -303,7 +302,9 @@ class MainPageFragment : Fragment() {
 
                     viewModel.load(0, generalId, orderId, tagId,chapterFilterID)
 
-                    provider.ChapterFilter= LibraryHelper.ChapterCountFilter.values()[chapterFilterID?:0]
+                    provider.ChapterFilter= LibraryHelper.ChapterCountFilter.entries.toTypedArray()[chapterFilterID?:0]
+
+                    provider.FABFilterApplied()
 
                     bottomSheetDialog.dismiss()
                 }
