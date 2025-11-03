@@ -68,7 +68,9 @@ abstract class MainAPI {
     open suspend fun loadHtml(url: String): String? {
         throw NotImplementedError()
     }
-
+    open fun FABFilterApplied()
+    {
+    }
     /*open suspend fun loadEpub(link: DownloadLinkType): ByteArray {
         if (link is DownloadLink) {
             return MainActivity.app.get(
