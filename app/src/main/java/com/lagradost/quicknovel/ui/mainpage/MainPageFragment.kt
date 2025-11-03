@@ -303,8 +303,9 @@ class MainPageFragment : Fragment() {
 
                     viewModel.load(0, generalId, orderId, tagId,chapterFilterID)
 
-                    provider.ChapterFilter= LibraryHelper.ChapterCountFilter.values()[chapterFilterID?:0]
-
+                    provider.ChapterFilter= LibraryHelper.ChapterCountFilter.entries.toTypedArray()[chapterFilterID?:0]
+                    provider.FABFilterApplied()
+                    
                     bottomSheetDialog.dismiss()
                 }
             }
