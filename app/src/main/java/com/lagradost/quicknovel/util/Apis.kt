@@ -79,8 +79,8 @@ class Apis {
             NovelFireProvider(),
             WuxiaBoxProvider(),
             SkyNovelsProvider(),
-            LightNovelTranslationsProvider(),
-            ArcaneTranslationsProvider()
+            LightNovelTranslationsProvider()
+          //  ArcaneTranslationsProvider() //cloudflare
         ).sortedBy { it.name }
 
         fun getApiFromName(name: String): APIRepository {
