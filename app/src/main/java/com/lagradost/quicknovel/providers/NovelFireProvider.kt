@@ -93,18 +93,36 @@ class NovelFireProvider :  MainAPI() {
         "Yuri" to "yuri"
     )
 
+    var lastLoadedPage=1
+    val minBooksNeeded=11
+    val maxPagesToFetch=10
+
+    val seenUrls = HashSet<String>()
+
+    override fun FABFilterApplied() {
+        lastLoadedPage=1
+        seenUrls.clear()
+    }
+
     override suspend fun loadMainPage(
         page: Int,
         mainCategory: String?,
         orderBy: String?,
         tag: String?
     ): HeadMainPageResponse {
-        val url = "$mainUrl/genre-${tag}/${orderBy}/${mainCategory}/all-novel?page=${page}" //  ${mainCategory ?: "all-"}${tag ?: "All"}/${orderBy ?: "update"}/?page=$page"
-        val document = app.get(url).document
 
-        return HeadMainPageResponse(
-            url,
-            list = document.select("li.novel-item").mapNotNull { select ->
+        isChapterCountFilterNeeded=true
+        val collectedResults = mutableListOf<SearchResponse>()
+        var currentPage = if (page <= lastLoadedPage) lastLoadedPage else page
+        var pagesFetched = 0 // optional safety cap
+
+        suspend fun fetchPage(p: Int): Pair<List<SearchResponse>, Boolean> {
+            val url = "$mainUrl/genre-${tag}/${orderBy}/${mainCategory}/all-novel?page=$p"
+            val document = app.get(url).document
+            val rawItems = document.select("li.novel-item")
+            val isLast = rawItems.isNotEmpty()
+
+            val filtered_list=rawItems.mapNotNull { select ->
                 val node = select.selectFirst("a[title]") ?: return@mapNotNull null
                 val href = node.attr("href") ?: return@mapNotNull null
                 val title = node.attr("title") ?: node.selectFirst("h4.novel-title")?.text() ?: return@mapNotNull null
@@ -112,15 +130,59 @@ class NovelFireProvider :  MainAPI() {
                 val chapterText = select.selectFirst(".novel-stats")?.ownText() ?: ""
                 val chapterCount = Regex("""\d+""").find(chapterText)?.value
 
+                // Apply filter
+                if (!LibraryHelper.isChapterCountInRange(ChapterFilter, chapterCount.toString())) {
+                    return@mapNotNull null
+                }
+
+                // Skip duplicates across loads
+                if (!seenUrls.add(href)) {
+                    return@mapNotNull null
+                }
+
                 newSearchResponse(
                     name = title,
                     url = href
                 ) {
-                    posterUrl = fixUrlNull(select.selectFirst("img")?.attr("data-src") ?: select.selectFirst("img")?.attr("src"))
-                    totalChapterCount=chapterCount
+                    posterUrl = fixUrlNull(
+                        select.selectFirst("img")?.attr("data-src")
+                            ?: select.selectFirst("img")?.attr("src")
+                    )
+                    totalChapterCount = chapterCount
                 }
             }
-        )
+
+
+            lastLoadedPage = p
+            return Pair(filtered_list, isLast)
+        }
+
+
+
+
+        // Keep fetching until we have enough or reach a reasonable limit
+        while (collectedResults.size < minBooksNeeded && pagesFetched < maxPagesToFetch) {
+            val (pageResults, hadRawItems) = fetchPage(currentPage)
+
+            // If there were no raw items on this page, it's the end — break
+            if (!hadRawItems) break
+
+            // Add whatever passed the filters (could be empty) and continue to next page if needed
+            if (pageResults.isNotEmpty()) {
+                collectedResults.addAll(pageResults)
+            }
+
+            // Prepare for next iteration
+            currentPage++
+            pagesFetched++
+        }
+        //Log.d("NOVELFIRE","${collectedResults.size}")
+
+        val url = "$mainUrl/genre-${tag}/${orderBy}/${mainCategory}/all-novel?page=${lastLoadedPage}"
+
+        return HeadMainPageResponse(url,collectedResults)
+
+
     }
 
     override suspend fun load(url: String): LoadResponse {
