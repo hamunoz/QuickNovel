@@ -3,6 +3,9 @@ package com.lagradost.quicknovel.providers
 import android.util.Log
 import com.lagradost.quicknovel.*
 import com.lagradost.quicknovel.MainActivity.Companion.app
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import org.jsoup.Jsoup
@@ -132,6 +135,7 @@ class MVLEmpyrProvider : MainAPI() {
         "Hiatus" to "Hiatus"
     )
 
+    private var isLoadingRemaining = false
 
     fun saveFullNovelListCache(list: List<Map<String, Any>>) {
         val jsonArray = JSONArray()
@@ -178,12 +182,57 @@ class MVLEmpyrProvider : MainAPI() {
         } else {
             // Log.d("MVLEmpyrProvider", "Fetching fullNovelList from API")
             // Log.d("MVLEmpyrProvider", "${apiUrl}per_page=10000")
-            val response = app.get("${apiUrl}per_page=10000", timeout = 60).body.string()
-            fullNovelList = parseJsonArray(response)
+            val response = app.get("${apiUrl}per_page=200", timeout = 60).body.string()
+
+            val initialList = parseJsonArray(response)
+            fullNovelList = initialList
+
             saveFullNovelListCache(fullNovelList)
+            // Fetch remaining in the background
+            fetchRemainingFullNovelListInBackground(initialList.size)
         }
         //Log.d("MVLEmpyrProvider","${fullNovelList.size}")
     }
+
+    suspend fun LoadAllNovelsNow()
+    {
+        if (isCacheValid()) {
+            //Log.d("MVLEmpyrProvider", "Loading fullNovelList from cache")
+            fullNovelList = loadFullNovelListCache()
+        }
+        else{
+            val totalUrl = "${apiUrl}per_page=10000"
+            val response = app.get(totalUrl, timeout = 60).body.string()
+            val fullList = parseJsonArray(response)
+            fullNovelList = fullList
+            saveFullNovelListCache(fullNovelList)
+        }
+    }
+
+    private fun fetchRemainingFullNovelListInBackground(alreadyFetched: Int) {
+        if (isLoadingRemaining) return // prevent duplicate calls
+        isLoadingRemaining = true
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val totalUrl = "${apiUrl}per_page=10000"
+                val response = app.get(totalUrl, timeout = 60).body.string()
+                val fullList = parseJsonArray(response)
+
+                // Only update if we actually got more
+                if (fullList.size > alreadyFetched) {
+                    fullNovelList = fullList
+                    saveFullNovelListCache(fullNovelList)
+                    // Optionally notify the UI (e.g., via LiveData or callback)
+                }
+            } catch (e: Exception) {
+                Log.e("MVLEmpyrProvider", "Error fetching remaining novels", e)
+            } finally {
+                isLoadingRemaining = false
+            }
+        }
+    }
+
 
 
     // Enhanced sorting and filtering function with detailed logs
@@ -378,7 +427,7 @@ class MVLEmpyrProvider : MainAPI() {
         val slug = slugRegex.find(url)?.groupValues?.get(1) ?: throw ErrorLoadingException("Slug not found")
 
         // Fetch only once when fullNovelList is empty
-        ensureFullNovelListLoaded();
+        LoadAllNovelsNow();
 
 
         val novelData = fullNovelList.find { it["slug"] == slug } ?: throw ErrorLoadingException("Novel not found")
