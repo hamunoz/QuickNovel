@@ -9,7 +9,7 @@ import org.jsoup.Jsoup
 class SkyNovelsProvider : MainAPI() {
     override val name = "SkyNovels"
     override val mainUrl = "https://www.skynovels.net"
-    override val lang = "en"
+    override val lang = "es"
     override val hasMainPage = false
 
     private val apiBase = "https://api.skynovels.net/api/"
