@@ -38,6 +38,7 @@ import com.lagradost.quicknovel.providers.WebnovelFanficProvider
 import com.lagradost.quicknovel.providers.WtrLabProvider
 import com.lagradost.quicknovel.providers.SkyNovelsProvider
 import com.lagradost.quicknovel.providers.LightNovelTranslationsProvider
+import com.lagradost.quicknovel.providers.FanMtlProvider
 import com.lagradost.quicknovel.providers.WuxiaBoxProvider
 import com.lagradost.quicknovel.util.Coroutines.ioSafe
 
@@ -79,7 +80,8 @@ class Apis {
             NovelFireProvider(),
             WuxiaBoxProvider(),
             SkyNovelsProvider(),
-            LightNovelTranslationsProvider()
+            LightNovelTranslationsProvider(),
+            FanMtlProvider()
           //  ArcaneTranslationsProvider() //cloudflare
         ).sortedBy { it.name }
 
