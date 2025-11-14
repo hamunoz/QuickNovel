@@ -39,6 +39,7 @@ import com.lagradost.quicknovel.providers.WtrLabProvider
 import com.lagradost.quicknovel.providers.SkyNovelsProvider
 import com.lagradost.quicknovel.providers.LightNovelTranslationsProvider
 //import com.lagradost.quicknovel.providers.FanMtlProvider
+import com.lagradost.quicknovel.providers.NovelHallProvider
 import com.lagradost.quicknovel.providers.WuxiaBoxProvider
 import com.lagradost.quicknovel.util.Coroutines.ioSafe
 
@@ -81,6 +82,7 @@ class Apis {
             WuxiaBoxProvider(),
             SkyNovelsProvider(),
             LightNovelTranslationsProvider(),
+            NovelHallProvider
            // FanMtlProvider()
           //  ArcaneTranslationsProvider() //cloudflare
         ).sortedBy { it.name }
