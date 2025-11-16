@@ -22,7 +22,7 @@
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:src="@drawable/ic_baseline_filter_list_24"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:background="?selectableItemBackgroundBorderless"
         android:padding="4dp"
         app:tint="?attr/iconColor"
         android:contentDescription="@string/mainpage_filter" />

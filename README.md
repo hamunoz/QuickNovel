@@ -35,8 +35,9 @@ Adfree FOSS Android app for downloading novels. It also functions as an Epub rea
 - https://www.webnovel.com/stories/fanfic
 - https://novelfire.net
 - https://www.wuxiabox.com
-- https://www.skynovels.net (test)
+- https://www.skynovels.net
 - https://lightnovelstranslations.com (test)
+- https://www.novelhall.com (test)
 
 **Screenshoots:**
 
