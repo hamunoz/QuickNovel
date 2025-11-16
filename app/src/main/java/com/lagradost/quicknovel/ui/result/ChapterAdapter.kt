@@ -3,6 +3,7 @@ package com.lagradost.quicknovel.ui.result
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.view.isGone
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import com.lagradost.quicknovel.ChapterData
 import com.lagradost.quicknovel.databinding.SimpleChapterBinding
@@ -31,6 +32,12 @@ class ChapterAdapter(val viewModel: ResultViewModel) : NoStateAdapter<ChapterDat
         binding.releaseDate.alpha = alpha
     }
 
+    class ChapterAdapterHolder(private val binding: SimpleChapterBinding) :
+        ViewHolderState<Nothing>(binding) {
+        private fun refresh(card: ChapterData, viewModel: ResultViewModel) {
+            binding.apply {
+                root.alpha = if (viewModel.hasReadChapter(chapter = card)) 0.5F else 1.0F
+                bookmarkIcon.isVisible = viewModel.isChapterBookmarked(card)
     override fun onBindContent(holder: ViewHolderState<Any>, item: ChapterData, position: Int) {
         val binding = holder.view as? SimpleChapterBinding ?: return
         binding.apply {

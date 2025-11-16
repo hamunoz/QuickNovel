@@ -1,5 +1,6 @@
 package com.lagradost.quicknovel.providers
 
+import android.util.Log
 import com.lagradost.quicknovel.HeadMainPageResponse
 import com.lagradost.quicknovel.LoadResponse
 import com.lagradost.quicknovel.MainAPI
@@ -71,7 +72,8 @@ class NovelsOnlineProvider : MainAPI() {
         val url =
             if (tag.isNullOrBlank()) "$mainUrl/top-novel/$page" else "$mainUrl/category/$tag/$page"
 
-        val document = app.get(url).document
+        val document = app.get(url, timeout = 60).document
+
 
         val headers = document.select("div.top-novel-block")
 

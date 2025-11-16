@@ -2,7 +2,6 @@ package com.lagradost.quicknovel
 
 import androidx.annotation.StringRes
 import androidx.annotation.WorkerThread
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.nicehttp.NiceResponse
 import com.lagradost.quicknovel.MainActivity.Companion.app
 import com.lagradost.quicknovel.mvvm.logError
@@ -23,6 +22,10 @@ abstract class MainAPI {
     open val rateLimitTime: Long = 0
     val hasRateLimit: Boolean get() = rateLimitTime > 0L
     val rateLimitMutex: Mutex = Mutex()
+
+
+    open var isChapterCountFilterNeeded=false
+    open var ChapterFilter=LibraryHelper.ChapterCountFilter.ALL
 
     open val usesCloudFlareKiller = false
 
@@ -65,7 +68,9 @@ abstract class MainAPI {
     open suspend fun loadHtml(url: String): String? {
         throw NotImplementedError()
     }
-
+    open fun FABFilterApplied()
+    {
+    }
     /*open suspend fun loadEpub(link: DownloadLinkType): ByteArray {
         if (link is DownloadLink) {
             return MainActivity.app.get(
@@ -180,7 +185,9 @@ data class SearchResponse(
     var rating: Int? = null,
     var latestChapter: String? = null,
     val apiName: String,
-    var posterHeaders: Map<String, String>? = null
+    var posterHeaders: Map<String, String>? = null,
+    var totalChapterCount:String? = null,
+    var bookReadStatus:String?=null,
 ) {
     val image get() = img(posterUrl, posterHeaders)
 }
@@ -189,14 +196,18 @@ fun MainAPI.newSearchResponse(
     name: String,
     url: String,
     fix: Boolean = true,
+    chapterCount: String? = null,
     initializer: SearchResponse.() -> Unit = { },
 ): SearchResponse {
+    val myReadStatus=LibraryHelper.getBookmarkForBook(name)
     val builder =
-        SearchResponse(name = name, url = if (fix) fixUrl(url) else url, apiName = this.name)
+        SearchResponse(name = name, url = if (fix) fixUrl(url) else url, apiName = this.name, totalChapterCount = chapterCount, bookReadStatus = myReadStatus)
     builder.initializer()
 
     return builder
 }
+
+
 
 enum class ReleaseStatus(@StringRes val resource: Int) {
     Ongoing(R.string.ongoing),
@@ -239,6 +250,7 @@ interface LoadResponse {
     val image: UiImage? get() = img(url = posterUrl, headers = posterHeaders)
     val apiName: String
     var related: List<SearchResponse>?
+    var totalChapterCount: String?
 }
 
 data class StreamResponse(
@@ -256,7 +268,8 @@ data class StreamResponse(
     override var status: ReleaseStatus? = null,
     override var posterHeaders: Map<String, String>? = null,
     var nextChapter: ChapterData? = null,
-    override var related: List<SearchResponse>? = null
+    override var related: List<SearchResponse>? = null,
+    override var totalChapterCount:String? = null,
 ) : LoadResponse
 
 suspend fun MainAPI.newStreamResponse(
@@ -270,7 +283,8 @@ suspend fun MainAPI.newStreamResponse(
         name = name,
         url = if (fix) fixUrl(url) else url,
         apiName = this.name,
-        data = data
+        data = data,
+        totalChapterCount = data.count().toString()
     )
     builder.initializer()
 
@@ -331,7 +345,8 @@ data class EpubResponse(
     var downloadLinks: List<DownloadLink>,
     var downloadExtractLinks: List<DownloadExtractLink>,
     override val apiName: String,
-    override var related: List<SearchResponse>? = null
+    override var related: List<SearchResponse>? = null,
+    override var totalChapterCount:String? = null,
 ) : LoadResponse
 
 suspend fun MainAPI.newEpubResponse(

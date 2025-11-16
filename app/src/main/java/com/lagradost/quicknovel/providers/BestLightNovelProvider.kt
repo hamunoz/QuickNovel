@@ -1,5 +1,6 @@
 package com.lagradost.quicknovel.providers
 
+import com.lagradost.quicknovel.LibraryHelper
 import com.lagradost.quicknovel.LoadResponse
 import com.lagradost.quicknovel.MainAPI
 import com.lagradost.quicknovel.MainActivity.Companion.app
@@ -33,7 +34,6 @@ class BestLightNovelProvider : MainAPI() {
             val head = it.selectFirst("> a")
             val name = head?.attr("title") ?: return@mapNotNull null
             val url = head.attr("href") ?: return@mapNotNull null
-
             newSearchResponse(name = name, url = url) {
                 latestChapter = it.selectFirst("> a.chapter")?.text()
                 posterUrl = fixUrlNull(head.selectFirst("> img")?.attr("src"))

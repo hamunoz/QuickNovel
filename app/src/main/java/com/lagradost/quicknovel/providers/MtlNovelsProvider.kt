@@ -1,5 +1,6 @@
 package com.lagradost.quicknovel.providers
 
+import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.quicknovel.ErrorLoadingException
@@ -84,19 +85,24 @@ class MtlNovelProvider : MainAPI() {
     ): HeadMainPageResponse {
         val url =
             if (tag.isNullOrBlank()) "$mainUrl/alltime-rank/page/$page" else "$mainUrl/genre/$tag/page/$page"
+        Log.d("MTL","${url}")
         val document = app.get(url).document
         val headers = document.select("div.box")
-
         val returnValue = headers.mapNotNull { h ->
             val name =
                 h.selectFirst("a")?.attr("aria-label")?.substringBeforeLast("Cover")
                     ?: return@mapNotNull null
             val cUrl = h.selectFirst("a")?.attr("href") ?: throw ErrorLoadingException()
+            val chapterText = h.selectFirst("span.ch")?.text()  // e.g. "6016 ch"
+            val chapterNumber = chapterText?.let {
+                Regex("""(\d+)""").find(it)?.groupValues?.get(1)
+            }
             newSearchResponse(
                 name = name,
                 url = cUrl,
             ) {
                 posterUrl = fixImage(fixUrlNull(h.selectFirst("amp-img amp-img")?.attr("src")))
+                totalChapterCount=chapterNumber
             }
         }
 
@@ -109,18 +115,15 @@ class MtlNovelProvider : MainAPI() {
 
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val response =
-            SearchResults.fromJson(
-                app.get(
-                    "$mainUrl/wp-admin/admin-ajax.php?action=autosuggest&q=$query"
-                ).text
-            )
+        val responseText = app.get("$mainUrl/wp-admin/admin-ajax.php?action=autosuggest&q=$query").text
+        val response = SearchResults.fromJson(responseText)
         return response.items?.first()?.results?.mapNotNull {
             newSearchResponse(
                 name = Jsoup.parse(it.title ?: return@mapNotNull null).text(),
                 url = it.permalink ?: return@mapNotNull null
             ) {
                 posterUrl = fixImage(fixUrlNull(it.thumbnail))
+                // Search response does not have latest chapter
             }
         }!!
     }

@@ -1,10 +1,12 @@
 package com.lagradost.quicknovel
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.WindowManager
@@ -40,6 +42,7 @@ import com.lagradost.quicknovel.CommonActivity.showToast
 import com.lagradost.quicknovel.CommonActivity.updateLocale
 import com.lagradost.quicknovel.DataStore.getKey
 import com.lagradost.quicknovel.DataStore.getKeys
+import com.lagradost.quicknovel.LibraryHelper.setLibraryBooks
 import com.lagradost.quicknovel.NotificationHelper.requestNotifications
 import com.lagradost.quicknovel.databinding.ActivityMainBinding
 import com.lagradost.quicknovel.databinding.BottomPreviewBinding
@@ -72,18 +75,23 @@ import com.lagradost.quicknovel.util.UIHelper.setImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import java.io.File
 import java.lang.ref.WeakReference
 import kotlin.concurrent.thread
 import kotlin.reflect.KClass
 
 class MainActivity : AppCompatActivity() {
     companion object {
+
         private var _mainActivity: WeakReference<MainActivity>? = null
         private var mainActivity
             get() = _mainActivity?.get()
             private set(value) {
                 _mainActivity = WeakReference(value)
             }
+        val filesDirSafe: File
+            get() = _mainActivity?.get()?.filesDir
+                ?: throw IllegalStateException("MainActivity not initialized yet")
 
         fun loadPreviewPage(searchResponse: SearchResponse) {
             mainActivity?.loadPopup(searchResponse.url, searchResponse.apiName)
@@ -127,6 +135,7 @@ class MainActivity : AppCompatActivity() {
         ).apply {
             defaultHeaders = mapOf("user-agent" to USER_AGENT)
         }
+        lateinit var context: Context
 
         // === API ===
         lateinit var navOptions: NavOptions
@@ -436,6 +445,12 @@ class MainActivity : AppCompatActivity() {
         CommonActivity.init(this)
 
         super.onCreate(savedInstanceState)
+
+        context = applicationContext // ✅ Safe!
+
+        context.setLibraryBooks()
+
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding!!.root)
 
