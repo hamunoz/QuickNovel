@@ -41,7 +41,7 @@
     <string name="rating_format_key">rating_format</string>
     <string name="grid_format_key">grid_format</string>
     <string name="download_format_key">download_format</string>
-    <string name="exampleTXT">this is a regular paragraph.</string>
+    <string name="exampleTXT">"this is <annotation key="rounded">a regular</annotation> paragraph."</string>
     <string name="tags">Tags</string>
     <string name="views">Views</string>
     <string name="delete">Delete</string>
@@ -153,7 +153,7 @@
     <string name="restore_failed_format" formatted="true">Failed to restore data from file %s</string>
     <string name="backup_success">Successfully stored data</string>
     <string name="backup_failed">Storage permissions missing, please try again</string>
-    <string name="backup_failed_error_format" formatted="true">Error backing up %s</string>
+    <string name="backup_failed_error_format">Error backing up %s</string>
     <string name="tts_locale">Language</string>
     <string name="tts_voice">Voice</string>
     <string name="tts_voice_title">TTS Voice</string>
@@ -165,8 +165,8 @@
     <string name="rating_format">Rating Format</string>
     <string name="cancel">Cancel</string>
     <string name="remove">Remove</string>
-    <string name="remove_from_history_format" formatted="true">This remove %s from your history.\nAre you sure?</string>
-    <string name="permanently_delete_format" formatted="true">This will permanently delete %s.\nAre you sure?</string>
+    <string name="remove_from_history_format">This remove %s from your history.\nAre you sure?</string>
+    <string name="permanently_delete_format">This will permanently delete %s.\nAre you sure?</string>
     <string name="remove_all_history">Are you sure?\nAll history will be lost.</string>
     <string name="remove_history">Remove History</string>
     <string name="search_providers">Search Providers</string>
@@ -182,18 +182,18 @@
     <string name="stubbed">Stubbed</string>
     <string name="text_to_speech">Text To Speech</string>
     <string name="text_to_speech_channel_description">The TTS notification channel</string>
-    <string name="overall_rating_format" formatted="true">Overall %s</string>
-    <string name="battery_format" formatted="true">%d%%</string>
+    <string name="overall_rating_format">Overall %s</string>
+    <string name="battery_format">%d%%</string>
     <string name="novel">Novel</string>
     <string name="reviews">Reviews</string>
     <string name="related">Related</string>
-    <string name="votes_format" formatted="true">%d Votes</string>
-    <string name="latest_format" formatted="true">Latest: %s</string>
-    <string name="new_update_found_format" formatted="true">New update found!\n %s -> %s</string>
+    <string name="votes_format">%d Votes</string>
+    <string name="latest_format">Latest: %s</string>
+    <string name="new_update_found_format">New update found!\n %s -> %s</string>
     <string name="download_started">Download started</string>
     <string name="download_failed">Download failed</string>
     <string name="update">Update</string>
-    <string name="dont_show_again">Don&apos;t show again</string>
+    <string name="dont_show_again">Don\'t show again</string>
     <string name="downloaded">Downloaded</string>
     <string name="manage">Manage</string>
     <string name="pause">Pause</string>
@@ -213,12 +213,12 @@
 
     <string name="alpha_sort_az">Alphabetical (A-Z)</string>
     <string name="alpha_sort_za">Alphabetical (Z-A)</string>
-    <string name="download_sort_hl">Download count (high to low)</string>
-    <string name="download_sort_lh">Download count (low to high)</string>
+    <string name="download_sort_hl">"Download count (high to low)"</string>
+    <string name="download_sort_lh">"Download count (low to high)"</string>
     <string name="download_perc_hl">Download percentage (high to low)</string>
     <string name="download_perc_lh">Download percentage (low to high)</string>
 
-    <string name="reload_chapter_format" formatted="true">Reloading chapter %s</string>
+    <string name="reload_chapter_format">Reloading chapter %s</string>
     <string name="ok">OK</string>
     <string name="more_info">More Info</string>
     <string name="download_path_key">download_path_key</string>
@@ -226,29 +226,10 @@
     <string name="bionic_reading">Bionic Reading</string>
     <string name="selectable_text">Selectable text</string>
     <string name="sleep_timer">Sleep</string>
-    <string name="sleep_format" formatted="true">%d min</string>
-    <string name="sleep_format_stop" formatted="true">TTS will stop in %d min</string>
+    <string name="sleep_format">%d min</string>
+    <string name="sleep_format_stop">TTS will stop in %d min</string>
     <string name="google_translate">Google translate</string>
     <string name="start_chapter">Skipped chapters</string>
-    
-    <!-- Chapter context menu -->
-    <string name="mark_as_read">Mark as Read</string>
-    <string name="mark_as_unread">Mark as Unread</string>
-    <string name="mark_all_previous_as_read">Mark All Previous as Read</string>
-    <string name="mark_all_previous_as_unread">Mark All Previous as Unread</string>
-    <string name="bookmark_chapter">Bookmark Chapter</string>
-    <string name="remove_bookmark">Remove Bookmark</string>
-    <string name="bookmarks">Bookmarks</string>
-    <string name="bookmarked">Bookmarked</string>
-    <string name="share_chapter">Share Chapter</string>
-    <string name="copy_url">Copy URL</string>
-    
-    <!-- Filter and Sort -->
-    <string name="filter_tab">Filter</string>
-    <string name="sort_tab">Sort</string>
-    <string name="display_tab">Display</string>
-    <string name="unread">Unread</string>
-    <string name="sort_by_source">By Source</string>
     <string name="tts_speed">TTS Speed</string>
     <string name="tts_pitch">TTS Pitch</string>
     <string name="show_logcat_key" translatable="false">show_logcat_key</string>
@@ -262,6 +243,8 @@
     <string name="clipboard_permission_error">Error accessing Clipboard, Please try again.</string>
     <string name="clipboard_unknown_error">Error copying, Please copy logcat and contact app support.</string>
     <string name="show_log_cat">Show Logcat 🐈</string>
+    <string name="unread">Unread</string>
+    <string name="bookmarks">Bookmarks</string>
     <string name="read">Read</string>
 
 </resources>
