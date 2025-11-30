@@ -3,7 +3,6 @@ package com.lagradost.quicknovel.providers
 import android.util.Log
 import com.lagradost.quicknovel.ChapterData
 import com.lagradost.quicknovel.HeadMainPageResponse
-import com.lagradost.quicknovel.LibraryHelper
 import com.lagradost.quicknovel.LoadResponse
 import com.lagradost.quicknovel.MainAPI
 import com.lagradost.quicknovel.MainActivity.Companion.app
@@ -30,12 +29,12 @@ class WuxiaBoxProvider :  MainAPI() {
     )
     override val tags = listOf(
         "All" to "all",
-        "Fan-Fic" to "fan-fiction",
+        "Fan-Fiction" to "fan-fiction",
         "Faloo" to "faloo",
         "Action" to "action",
         "Adventure" to "adventure",
         "Comedy" to "comedy",
-        "CRomance" to "contemporary-romance",
+        "Contemporary Romance" to "contemporary-romance",
         "Drama" to "drama",
         "Eastern Fantasy" to "eastern-fantasy",
         "Fantasy" to "fantasy",
@@ -67,7 +66,7 @@ class WuxiaBoxProvider :  MainAPI() {
         "Xianxia" to "xianxia",
         "Xuanhuan" to "xuanhuan",
         "Yaoi" to "yaoi",
-        "Two-D" to "two-dimensional",
+        "Two-dimensional" to "two-dimensional",
         "Erciyuan" to "erciyuan",
         "Game" to "game",
         "Military" to "military",
@@ -80,26 +79,15 @@ class WuxiaBoxProvider :  MainAPI() {
         "Magic" to "magic",
         "Shoujo Ai" to "shoujo-ai",
         "Urban" to "urban",
-        "VR" to "virtual-reality",
+        "Virtual Reality" to "virtual-reality",
         "Wuxia Xianxia" to "wuxia_xianxia",
-        "Official" to "official_circles",
-        "Sci-fi" to "science_fiction",
-        "Thriller" to "suspense_thriller",
+        "Official Circles" to "official_circles",
+        "Science Fiction" to "science_fiction",
+        "Suspense Thriller" to "suspense_thriller",
         "Travel Through Time" to "travel_through_time"
     )
 
     override val orderBys = listOf("New" to "newstime", "Popular" to "onclick", "Updates" to "lastdotime")
-
-    var lastLoadedPage=0
-    val minBooksNeeded=11
-    val maxPagesToFetch=10
-
-    val seenUrls = HashSet<String>()
-
-    override fun FABFilterApplied() {
-        lastLoadedPage=0
-        seenUrls.clear()
-    }
 
     override suspend fun loadMainPage(
         page: Int,
@@ -107,22 +95,16 @@ class WuxiaBoxProvider :  MainAPI() {
         orderBy: String?,
         tag: String?
     ): HeadMainPageResponse {
-        var pp=page
-        if(pp>0){
-            pp--
+        var p=page;
+        if(p>0){
+            p--;
         }
-        isChapterCountFilterNeeded=true
-        val collectedResults = mutableListOf<SearchResponse>()
-        var currentPage = if (pp <= lastLoadedPage) lastLoadedPage else pp
-        var pagesFetched = 0 // optional safety cap
+        val url = "$mainUrl/list/${tag}/${mainCategory}-${orderBy}-${p}.html"
+        val document = app.get(url, timeout = 60).document
 
-        suspend fun fetchPage(p: Int): Pair<List<SearchResponse>, Boolean> {
-            val url = "$mainUrl/list/${tag}/${mainCategory}-${orderBy}-${p}.html"
-            val document = app.get(url, timeout = 60).document
-            val rawItems = document.select("li.novel-item")
-            val isLast = rawItems.isNotEmpty()
-
-            val filtered_list=rawItems.mapNotNull { select ->
+        return HeadMainPageResponse(
+            url,
+            list = document.select("li.novel-item").mapNotNull { select ->
                 val node = select.selectFirst("a[title]") ?: return@mapNotNull null
                 val href = node.attr("href") ?: return@mapNotNull null
                 val title = node.attr("title") ?: node.selectFirst("h4.novel-title")?.text() ?: return@mapNotNull null
@@ -137,16 +119,6 @@ class WuxiaBoxProvider :  MainAPI() {
                     it.attr("data-src").ifBlank { it.attr("src") }
                 }
 
-                // Apply filter
-                if (!LibraryHelper.isChapterCountInRange(ChapterFilter, chapterCount.toString())) {
-                    return@mapNotNull null
-                }
-
-                // Skip duplicates across loads
-                if (!seenUrls.add(href)) {
-                    return@mapNotNull null
-                }
-
                 newSearchResponse(
                     name = title,
                     url = href
@@ -155,33 +127,7 @@ class WuxiaBoxProvider :  MainAPI() {
                     totalChapterCount=chapterCount
                 }
             }
-
-
-            lastLoadedPage = p
-            return Pair(filtered_list, isLast)
-        }
-
-        // Keep fetching until we have enough or reach a reasonable limit
-        while (collectedResults.size < minBooksNeeded && pagesFetched < maxPagesToFetch) {
-            val (pageResults, hadRawItems) = fetchPage(currentPage)
-
-            // If there were no raw items on this page, it's the end — break
-            if (!hadRawItems) break
-
-            // Add whatever passed the filters (could be empty) and continue to next page if needed
-            if (pageResults.isNotEmpty()) {
-                collectedResults.addAll(pageResults)
-            }
-
-            // Prepare for next iteration
-            currentPage++
-            pagesFetched++
-        }
-
-        val url = "$mainUrl/list/${tag}/${mainCategory}-${orderBy}-${lastLoadedPage}.html"
-
-
-        return HeadMainPageResponse(url,collectedResults)
+        )
     }
 
     override suspend fun load(url: String): LoadResponse {
