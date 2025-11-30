@@ -91,7 +91,7 @@ class Apis {
             WuxiaBoxProvider(),
             SkyNovelsProvider(),
             LightNovelTranslationsProvider(),
-            NovelHallProvider,
+            NovelHallProvider(),
             //theend
             PawReadProver()
         ).sortedBy { it.name }
