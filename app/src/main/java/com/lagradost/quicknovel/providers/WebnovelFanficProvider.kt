@@ -27,7 +27,6 @@ class WebnovelFanficProvider : MainAPI() {
 
     // Category mappings for fanfiction types
     override val tags = listOf(
-        "All" to "fanfic",
         "Anime & Comics" to "fanfic-anime-comics",
         "Video Games" to "fanfic-video-games",
         "Celebrities" to "fanfic-celebrities",
@@ -38,21 +37,6 @@ class WebnovelFanficProvider : MainAPI() {
         "Theater" to "fanfic-theater",
         "Others" to "fanfic-others"
     )
-
-    override val orderBys = listOf(
-        "Popular" to "1",
-        "Recommended" to "2",
-        "Most Collections" to "3",
-        "Rating" to "4",
-        "Updated" to "5"
-    )
-
-    override val mainCategories = listOf(
-        "All" to "0",
-        "Ongoing" to "1",
-        "Completed" to "2",
-    )
-
     private suspend fun ensureCookiesLoaded() {
         if (cachedCookies != null && cachedCsrfToken != null) return
 
@@ -64,18 +48,7 @@ class WebnovelFanficProvider : MainAPI() {
         cachedCsrfToken = csrfToken
     }
 
-    var lastLoadedPage = 1
-    val minBooksNeeded=11
-    val maxPagesToFetch=10
 
-    val seenUrls = HashSet<String>()
-
-    override fun FABFilterApplied() {
-        //super.FABClicked()
-        lastLoadedPage= 1
-        seenUrls.clear()
-        //Log.d("WEBNOVEL","Last page: ${lastLoadedPage}")
-    }
 
     override suspend fun loadMainPage(
         page: Int,
@@ -86,87 +59,49 @@ class WebnovelFanficProvider : MainAPI() {
 
         ensureCookiesLoaded()
 
-        isChapterCountFilterNeeded=true
-
         val slug = tag ?: "fanfic"
         val categoryId = getCategoryIdFromTag(slug)
-
-        var currentPage = if (page <= lastLoadedPage) lastLoadedPage else page
-        val collectedResults = mutableListOf<SearchResponse>()
-        var pagesFetched = 0
+        var apiUrl = "$mainUrl/go/pcm/category/categoryPage?_csrfToken=$cachedCsrfToken&language=en&categoryId=$categoryId&categoryType=4&orderBy=3&pageIndex=$page"
 
 
-        //var apiUrl = "$mainUrl/go/pcm/category/categoryAjax?_csrfToken=$cachedCsrfToken&language=en&categoryId=$categoryId&categoryType=4&orderBy=$orderBy&pageIndex=$page&bookStatus=$mainCategory"
+        val client = OkHttpClient()
+        //val cookies = "_csrfToken=$csrfToken; webnovel-language=en; webnovel-content-language=en"
+        val request = Request.Builder()
+            .url(apiUrl)
+            .addHeader("User-Agent", MOBILE_USER_AGENT)
+            .addHeader("Referer", "$mainUrl/stories/$slug")
+            .addHeader("Cookie", cachedCookies!!)
+            .build()
 
-        fun fetchPage(p: Int): Pair<List<SearchResponse>, Boolean> {
-            val apiUrl =
-                "$mainUrl/go/pcm/category/categoryAjax?_csrfToken=$cachedCsrfToken&language=en&categoryId=$categoryId&categoryType=4&orderBy=$orderBy&pageIndex=$p&bookStatus=$mainCategory"
+        val response = client.newCall(request).execute()
+        val body = response.body?.string() ?: throw ErrorLoadingException("Empty response")
 
-            val client = OkHttpClient()
-            val request = Request.Builder()
-                .url(apiUrl)
-                .addHeader("User-Agent", MOBILE_USER_AGENT)
-                .addHeader("Referer", "$mainUrl/stories/$slug")
-                .addHeader("Cookie", cachedCookies!!)
-                .build()
+        val json = JSONObject(body)
+        val results = mutableListOf<SearchResponse>()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: throw ErrorLoadingException("Empty response")
+        var ItemLIst=json.getJSONObject("data").getJSONArray("items")
 
-            val json = JSONObject(body)
-            val items = json.getJSONObject("data").getJSONArray("items")
-            val hadAnyRawItems = items.length() > 0
+        if(ItemLIst.length() >0){
+            for (i in 0 until ItemLIst.length()) {
 
-            val filtered = mutableListOf<SearchResponse>()
+                val book = ItemLIst.getJSONObject(i)
 
-            for (i in 0 until items.length()) {
-                val book = items.getJSONObject(i)
-                val bookId = book.optString("bookId") ?: continue
-                val link = fixUrlNull("$mainUrl/book/$bookId") ?: continue
-                if (!seenUrls.add(link)) continue // skip duplicates
+                val id = book.optString("bookId") ?: continue
+                val title = book.optString("bookName", "Untitled") // fallback title)
+                val cover = "https://book-pic.webnovel.com/bookcover/$id?imageMogr2/thumbnail/180x|imageMogr2/format/webp|imageMogr2/quality/70!"
 
-                val chapterCount = book.optString("chapterNum", "0")
-                if (!LibraryHelper.isChapterCountInRange(ChapterFilter, chapterCount.toString())) {
-                    continue
-                }
+                val link = fixUrlNull("$mainUrl/book/$id")
+                val chapterCount=book.optString("chapterNum","0")
 
-                val title = book.optString("bookName", "Untitled")
-                val cover =
-                    "https://book-pic.webnovel.com/bookcover/$bookId?imageMogr2/thumbnail/180x|imageMogr2/format/webp|imageMogr2/quality/70!"
-
-
-                filtered.add(newSearchResponse(title, link) {
-                    posterUrl = cover
-                    totalChapterCount = chapterCount
+                results.add(newSearchResponse(title, link ?: continue) {
+                    this.posterUrl = cover;
+                    this.totalChapterCount=chapterCount
                 })
             }
-
-            //Log.d("WEBNOVEL","Before: ${items.length()}  Filtered: ${filtered.size}")
-            lastLoadedPage = p
-
-            return Pair(filtered, hadAnyRawItems)
         }
 
-        // Keep fetching pages until enough results or end of listing
-        while (collectedResults.size < minBooksNeeded && pagesFetched < maxPagesToFetch) {
-            val (pageResults, hadRawItems) = fetchPage(currentPage)
 
-            if (!hadRawItems) break // stop if API returned no items (end)
-
-            if (pageResults.isNotEmpty()) {
-                collectedResults.addAll(pageResults)
-            }
-
-            currentPage++
-            pagesFetched++
-        }
-        //Log.d("WEBNOVEL","Final: ${collectedResults.size} Last page: ${lastLoadedPage}")
-        val apiUrl =
-            "$mainUrl/go/pcm/category/categoryAjax?_csrfToken=$cachedCsrfToken&language=en&categoryId=$categoryId&categoryType=4&orderBy=$orderBy&pageIndex=$lastLoadedPage&bookStatus=$mainCategory"
-
-
-
-        return HeadMainPageResponse(apiUrl, collectedResults)
+        return HeadMainPageResponse(apiUrl, results)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -184,6 +119,7 @@ class WebnovelFanficProvider : MainAPI() {
             isLastPage = nextPage.second
             pageIndex++
         }
+
         return allResults
     }
 
@@ -215,11 +151,12 @@ class WebnovelFanficProvider : MainAPI() {
             val link = "$mainUrl/book/$id"
             val chapterCount=book.optString("chapterNum","0")
 
-            results.add( newSearchResponse(title, fixUrl(link)) {
+
+
+            results.add(newSearchResponse(title, fixUrl(link)) {
                 this.posterUrl = cover;
                 this.totalChapterCount=chapterCount
             })
-
         }
 
         val isLastPage = fanficData.optInt("isLast", 1) == 1
@@ -335,8 +272,7 @@ class WebnovelFanficProvider : MainAPI() {
             "fanfic-tv" -> "81008"
             "fanfic-theater" -> "81004"
             "fanfic-others" -> "81009"
-            "fanfic" -> "0"
-            else -> "0"
+            else -> "81006"
         }
     }
 }
