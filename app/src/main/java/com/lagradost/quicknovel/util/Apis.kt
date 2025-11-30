@@ -18,11 +18,15 @@ import com.lagradost.quicknovel.providers.HiraethTranslationProvider
 import com.lagradost.quicknovel.providers.IndoWebNovelProvider
 import com.lagradost.quicknovel.providers.KolNovelProvider
 import com.lagradost.quicknovel.providers.LibReadProvider
+import com.lagradost.quicknovel.providers.LightNovelTranslationsProvider
 import com.lagradost.quicknovel.providers.MeioNovelProvider
 import com.lagradost.quicknovel.providers.MoreNovelProvider
 import com.lagradost.quicknovel.providers.MtlNovelProvider
+import com.lagradost.quicknovel.providers.MVLEmpyrProvider
 import com.lagradost.quicknovel.providers.NovelBinProvider
+import com.lagradost.quicknovel.providers.NovelFireProvider
 import com.lagradost.quicknovel.providers.NovelFullProvider
+import com.lagradost.quicknovel.providers.NovelHallProvider
 import com.lagradost.quicknovel.providers.NovelsOnlineProvider
 import com.lagradost.quicknovel.providers.PawReadProver
 import com.lagradost.quicknovel.providers.ReadNovelFullProvider
@@ -31,7 +35,10 @@ import com.lagradost.quicknovel.providers.RedditProvider
 import com.lagradost.quicknovel.providers.RoyalRoadProvider
 import com.lagradost.quicknovel.providers.SakuraNovelProvider
 import com.lagradost.quicknovel.providers.ScribblehubProvider
+import com.lagradost.quicknovel.providers.SkyNovelsProvider
+import com.lagradost.quicknovel.providers.WebnovelFanficProvider
 import com.lagradost.quicknovel.providers.WtrLabProvider
+import com.lagradost.quicknovel.providers.WuxiaBoxProvider
 import com.lagradost.quicknovel.util.Coroutines.ioSafe
 
 class Apis {
@@ -77,6 +84,15 @@ class Apis {
             SakuraNovelProvider(), // cloudflare?
             // WattpadProvider(), // they have randomized the css classes
             WtrLabProvider(),
+            //new
+            MVLEmpyrProvider(),
+            WebnovelFanficProvider(),
+            NovelFireProvider(),
+            WuxiaBoxProvider(),
+            SkyNovelsProvider(),
+            LightNovelTranslationsProvider(),
+            NovelHallProvider,
+            //theend
             PawReadProver()
         ).sortedBy { it.name }
 
