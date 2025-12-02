@@ -46,32 +46,32 @@ class Apis {
             //BestLightNovelProvider(),
 
             RoyalRoadProvider(),
-            HiraethTranslationProvider(),
+            //HiraethTranslationProvider(),
             LibReadProvider(),
             FreewebnovelProvider(),
 
-            ReadfromnetProvider(),
-            AllNovelProvider(),
+            //ReadfromnetProvider(),
+            //AllNovelProvider(),
 
             NovelFullProvider(),
             NovelBinProvider(),
 
-            NovelsOnlineProvider(),
+            //NovelsOnlineProvider(),
 
-            GraycityProvider(),
+            //GraycityProvider(),
 //            MtlNovelProvider(),
 
             AnnasArchive(),
-            ReadNovelFullProvider(),
-            ScribblehubProvider(),
-            KolNovelProvider(),
-            MeioNovelProvider(),
-            MoreNovelProvider(), // cloudflare?
-            IndoWebNovelProvider(),
-            SakuraNovelProvider(), // cloudflare?
+            //ReadNovelFullProvider(),
+            //ScribblehubProvider(),
+            //KolNovelProvider(),
+            //MeioNovelProvider(),
+            //oreNovelProvider(), // cloudflare?
+            //IndoWebNovelProvider(),
+            //SakuraNovelProvider(), // cloudflare?
 
-            WtrLabProvider(),
-            PawReadProver(),
+            //WtrLabProvider(),
+            //PawReadProver(),
 
             MVLEmpyrProvider(),
             WebnovelFanficProvider(),

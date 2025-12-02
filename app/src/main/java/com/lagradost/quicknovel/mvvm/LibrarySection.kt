@@ -2,6 +2,7 @@ package com.lagradost.quicknovel
 
 import android.content.Context
 import android.util.Log
+import com.lagradost.quicknovel.BaseApplication.Companion.getKey
 import com.lagradost.quicknovel.DataStore.getKey
 import com.lagradost.quicknovel.DataStore.getKeys
 import com.lagradost.quicknovel.ui.ReadType
@@ -121,5 +122,10 @@ object LibraryHelper {
             ChapterCountFilter.GREATER_EQUAL_400 -> count >= 400
             ChapterCountFilter.GREATER_EQUAL_500 -> count >= 500
         }
+    }
+
+    fun getLastReadChapterIndex(bookName: String): Int {
+        val k=getKey<Int>(EPUB_CURRENT_POSITION, bookName) ?:0
+        return k+1
     }
 }

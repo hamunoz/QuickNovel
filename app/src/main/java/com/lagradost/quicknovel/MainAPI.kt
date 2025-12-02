@@ -73,6 +73,11 @@ abstract class MainAPI {
     {
     }
 
+    open fun ResetFiltersandPage()
+    {
+
+    }
+
     /*open suspend fun loadEpub(link: DownloadLinkType): ByteArray {
         if (link is DownloadLink) {
             return MainActivity.app.get(
@@ -252,7 +257,6 @@ interface LoadResponse {
     val image: UiImage? get() = img(url = posterUrl, headers = posterHeaders)
     val apiName: String
     var related: List<SearchResponse>?
-    var totalChapterCount: String?
 }
 
 data class StreamResponse(
@@ -271,7 +275,6 @@ data class StreamResponse(
     override var posterHeaders: Map<String, String>? = null,
     var nextChapter: ChapterData? = null,
     override var related: List<SearchResponse>? = null,
-    override var totalChapterCount:String? = null,
 ) : LoadResponse
 
 suspend fun MainAPI.newStreamResponse(
@@ -286,7 +289,6 @@ suspend fun MainAPI.newStreamResponse(
         url = if (fix) fixUrl(url) else url,
         apiName = this.name,
         data = data,
-        totalChapterCount = data.count().toString()
     )
     builder.initializer()
 
@@ -348,7 +350,6 @@ data class EpubResponse(
     var downloadExtractLinks: List<DownloadExtractLink>,
     override val apiName: String,
     override var related: List<SearchResponse>? = null,
-    override var totalChapterCount:String? = null,
 ) : LoadResponse
 
 suspend fun MainAPI.newEpubResponse(

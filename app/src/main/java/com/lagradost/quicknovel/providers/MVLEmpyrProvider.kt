@@ -330,6 +330,9 @@ class MVLEmpyrProvider : MainAPI() {
         return sortedList
     }
 
+    override fun ResetFiltersandPage() {
+        ChapterFilter=LibraryHelper.ChapterCountFilter.ALL
+    }
 
     override suspend fun loadMainPage(
         page: Int,

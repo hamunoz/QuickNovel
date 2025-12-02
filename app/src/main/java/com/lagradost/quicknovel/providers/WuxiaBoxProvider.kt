@@ -100,6 +100,10 @@ class WuxiaBoxProvider :  MainAPI() {
         lastLoadedPage=0
         seenUrls.clear()
     }
+    override fun ResetFiltersandPage() {
+        FABFilterApplied()
+        ChapterFilter=LibraryHelper.ChapterCountFilter.ALL
+    }
 
     override suspend fun loadMainPage(
         page: Int,

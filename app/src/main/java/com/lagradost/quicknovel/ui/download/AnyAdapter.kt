@@ -12,6 +12,7 @@ import androidx.viewbinding.ViewBinding
 import com.lagradost.quicknovel.BaseApplication.Companion.getKey
 import com.lagradost.quicknovel.DOWNLOAD_EPUB_SIZE
 import com.lagradost.quicknovel.DownloadState
+import com.lagradost.quicknovel.LibraryHelper
 import com.lagradost.quicknovel.R
 import com.lagradost.quicknovel.databinding.DownloadResultCompactBinding
 import com.lagradost.quicknovel.databinding.DownloadResultGridBinding
@@ -99,7 +100,8 @@ class AnyAdapter(
                 val card = item as ResultCached
                 view.apply {
                     imageText.text = card.name
-                    historyExtraText.text = "${card.totalChapters} Chapters"
+                    val lastchap=LibraryHelper.getLastReadChapterIndex(item.name)
+                    historyExtraText.text = "${lastchap}/${card.totalChapters} Chapters"
                     imageView.setImage(card.poster)
 
                     historyPlay.setOnClickListener {
@@ -195,20 +197,22 @@ class AnyAdapter(
                             ) // skipCache = false
                             imageText.text = item.name
 
-                            val chapterCountStr = item.totalChapterCount
+                            val chapterCountStr = item.totalChapters.toString()
+
                             if (!chapterCountStr.isNullOrBlank())
                             {
                                 val chapterCount = chapterCountStr.toIntOrNull()
+                                val lastchap=LibraryHelper.getLastReadChapterIndex(item.name)
 
                                 chapterCountOverlay.isVisible = true
                                 chapterCountOverlay.text = if (chapterCount != null && chapterCount > 0) {
-                                    "$chapterCount ch"
+                                    "${lastchap}/${chapterCount}"
                                 }
                                 else {
                                     if(chapterCount==0){
                                         chapterCountOverlay.isVisible = false
                                     }
-                                    "$chapterCountStr ch" // fallback to string like "V5 46"
+                                    "$chapterCountStr" // fallback to string like "V5 46"
                                 }
                             }
                             else

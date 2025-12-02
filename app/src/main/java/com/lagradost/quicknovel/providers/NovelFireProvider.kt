@@ -103,6 +103,10 @@ class NovelFireProvider :  MainAPI() {
         lastLoadedPage=1
         seenUrls.clear()
     }
+    override fun ResetFiltersandPage() {
+        FABFilterApplied()
+        ChapterFilter=LibraryHelper.ChapterCountFilter.ALL
+    }
 
     override suspend fun loadMainPage(
         page: Int,

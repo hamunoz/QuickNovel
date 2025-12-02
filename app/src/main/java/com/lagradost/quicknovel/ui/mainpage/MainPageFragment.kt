@@ -322,4 +322,9 @@ class MainPageFragment : Fragment() {
             binding.mainpageFab.isGone = it // CANT USE FILTER ON A SEARCHERS
         }
     }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        viewModel.api.api.ResetFiltersandPage()
+    }
 }

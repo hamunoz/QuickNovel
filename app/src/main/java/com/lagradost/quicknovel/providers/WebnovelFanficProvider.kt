@@ -1,7 +1,9 @@
 package com.lagradost.quicknovel.providers
 
+import android.os.Debug
 import android.util.Log
 import com.lagradost.quicknovel.*
+import com.lagradost.quicknovel.CommonActivity.showToast
 import com.lagradost.quicknovel.MainActivity.Companion.app
 import com.lagradost.quicknovel.utils.SessionCookieProvider
 import okhttp3.OkHttpClient
@@ -66,7 +68,7 @@ class WebnovelFanficProvider : MainAPI() {
 
     var lastLoadedPage = 1
     val minBooksNeeded=11
-    val maxPagesToFetch=10
+    val maxPagesToFetch=20
 
     val seenUrls = HashSet<String>()
 
@@ -75,6 +77,19 @@ class WebnovelFanficProvider : MainAPI() {
         lastLoadedPage= 1
         seenUrls.clear()
         //Log.d("WEBNOVEL","Last page: ${lastLoadedPage}")
+    }
+
+    override fun ResetFiltersandPage() {
+        FABFilterApplied()
+        ChapterFilter=LibraryHelper.ChapterCountFilter.ALL
+    }
+
+    fun logLong(tag: String, message: String) {
+        val maxLogSize = 4000
+        for (i in 0..message.length step maxLogSize) {
+            val end = (i + maxLogSize).coerceAtMost(message.length)
+            Log.d(tag, message.substring(i, end))
+        }
     }
 
     override suspend fun loadMainPage(
@@ -113,43 +128,63 @@ class WebnovelFanficProvider : MainAPI() {
             val response = client.newCall(request).execute()
             val body = response.body?.string() ?: throw ErrorLoadingException("Empty response")
 
-            val json = JSONObject(body)
-            val items = json.getJSONObject("data").getJSONArray("items")
-            val hadAnyRawItems = items.length() > 0
+            if(!body.startsWith("{") || body.startsWith("<!DOCTYPE"))
+            {
+                Log.e("WEBNOVEL", "Non-JSON response detected, skipping page.")
+                return Pair(emptyList(), false)
+            }
+            else
+            {
 
-            val filtered = mutableListOf<SearchResponse>()
 
-            for (i in 0 until items.length()) {
-                val book = items.getJSONObject(i)
-                val bookId = book.optString("bookId") ?: continue
-                val link = fixUrlNull("$mainUrl/book/$bookId") ?: continue
-                if (!seenUrls.add(link)) continue // skip duplicates
+                val json = JSONObject(body)
+                val items = json.getJSONObject("data").getJSONArray("items")
+                val hadAnyRawItems = items.length() > 0
 
-                val chapterCount = book.optString("chapterNum", "0")
-                if (!LibraryHelper.isChapterCountInRange(ChapterFilter, chapterCount.toString())) {
-                    continue
+                //logLong("WEBNOVEL", items.toString())
+
+                if(!hadAnyRawItems)
+                {
+                    showToast("No More Books !!")
                 }
 
-                val title = book.optString("bookName", "Untitled")
-                val cover =
-                    "https://book-pic.webnovel.com/bookcover/$bookId?imageMogr2/thumbnail/180x|imageMogr2/format/webp|imageMogr2/quality/70!"
+                val filtered = mutableListOf<SearchResponse>()
+
+                for (i in 0 until items.length()) {
+                    val book = items.getJSONObject(i)
+                    val bookId = book.optString("bookId") ?: continue
+                    val link = fixUrlNull("$mainUrl/book/$bookId") ?: continue
+                    if (!seenUrls.add(link)) continue // skip duplicates
+
+                    val chapterCount = book.optString("chapterNum", "0")
+                    if (!LibraryHelper.isChapterCountInRange(ChapterFilter, chapterCount.toString())) {
+                        continue
+                    }
+
+                    val title = book.optString("bookName", "Untitled")
+                    val cover =
+                        "https://book-pic.webnovel.com/bookcover/$bookId?imageMogr2/thumbnail/180x|imageMogr2/format/webp|imageMogr2/quality/70!"
 
 
-                filtered.add(newSearchResponse(title, link) {
-                    posterUrl = cover
-                    totalChapterCount = chapterCount
-                })
+                    filtered.add(newSearchResponse(title, link) {
+                        posterUrl = cover
+                        totalChapterCount = chapterCount
+                    })
+                }
+
+                //Log.d("WEBNOVEL","Before: ${items.length()}  Filtered: ${filtered.size}")
+                lastLoadedPage = p
+
+                return Pair(filtered, hadAnyRawItems)
             }
 
-            //Log.d("WEBNOVEL","Before: ${items.length()}  Filtered: ${filtered.size}")
-            lastLoadedPage = p
 
-            return Pair(filtered, hadAnyRawItems)
         }
 
         // Keep fetching pages until enough results or end of listing
         while (collectedResults.size < minBooksNeeded && pagesFetched < maxPagesToFetch) {
             val (pageResults, hadRawItems) = fetchPage(currentPage)
+            Log.e("WEBNOVEL","Current Page: ${currentPage} ${collectedResults.size}")
 
             if (!hadRawItems) break // stop if API returned no items (end)
 
@@ -159,6 +194,7 @@ class WebnovelFanficProvider : MainAPI() {
 
             currentPage++
             pagesFetched++
+            Thread.sleep(1000)
         }
         //Log.d("WEBNOVEL","Final: ${collectedResults.size} Last page: ${lastLoadedPage}")
         val apiUrl =
