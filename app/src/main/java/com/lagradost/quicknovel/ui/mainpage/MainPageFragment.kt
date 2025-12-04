@@ -238,10 +238,21 @@ class MainPageFragment : Fragment() {
             if (!api.hasMainPage) {
                 return@setOnClickListener
             }
+            //new
+            android.util.Log.d("FABDebug", "FAB clicked!")
 
             val bottomSheetDialog = BottomSheetDialog(requireContext())
             val binding = FilterBottomSheetBinding.inflate(layoutInflater, null, false)
             bottomSheetDialog.setContentView(binding.root)
+
+            //new
+            val provider = viewModel.api.api
+            if(provider.isChapterCountFilterNeeded)
+            {
+                binding.filterChapterCountText.isVisible=true
+                binding.filterChapterCountSpinner.isVisible=true
+                viewModel.currentChapterCountFilter.value=provider.ChapterFilter.ordinal
+            }
 
             fun setUp(
                 data: List<Pair<String, String>>,
@@ -274,7 +285,10 @@ class MainPageFragment : Fragment() {
                     filterGeneralSpinner,
                     viewModel.currentMainCategory.value
                 )
-                setUp(api.tags, filterTagText, filterTagSpinner, viewModel.currentTag.value)
+               
+                 setUp(api.tags, filterTagText, filterTagSpinner, viewModel.currentTag.value)
+ //new change
+                setUp(getChapterFiltersList(),filterChapterCountText,filterChapterCountSpinner,viewModel.currentChapterCountFilter.value)
 
                 filterButton.setOnClickListener {
                     fun getId(spinner: Spinner): Int? {
@@ -285,6 +299,14 @@ class MainPageFragment : Fragment() {
                     val orderId = getId(filterOrderSpinner)
                     val tagId = getId(filterTagSpinner)
                     isLoading = true
+
+                    //new
+                    viewModel.load(0, generalId, orderId, tagId,chapterFilterID)
+
+                    provider.ChapterFilter= LibraryHelper.ChapterCountFilter.entries.toTypedArray()[chapterFilterID?:0]
+
+                    provider.FABFilterApplied()
+                    
 
                     viewModel.load(0, generalId, orderId, tagId)
 
@@ -304,4 +326,11 @@ class MainPageFragment : Fragment() {
             binding.mainpageFab.isGone = it // CANT USE FILTER ON A SEARCHERS
         }
     }
+
+    //new
+      override fun onDestroyView() {
+        super.onDestroyView()
+        viewModel.api.api.ResetFiltersandPage()
+      }
+      
 }
