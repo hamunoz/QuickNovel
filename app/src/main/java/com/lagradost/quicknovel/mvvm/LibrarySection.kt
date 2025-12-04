@@ -2,6 +2,7 @@ package com.lagradost.quicknovel
 
 import android.content.Context
 import android.util.Log
+import com.lagradost.quicknovel.BaseApplication.Companion.getKey
 import com.lagradost.quicknovel.DataStore.getKey
 import com.lagradost.quicknovel.DataStore.getKeys
 import com.lagradost.quicknovel.ui.ReadType
@@ -97,68 +98,8 @@ object LibraryHelper {
         }
     }
 
-//count cap
-fun getChapterCountText(count: Int?): String? {
-    return if (count != null && count > 0) {
-        "$count ch"
-    } else {
-        null
-    }
-}
 
-/* use val text = LibraryHelper.getChapterCountText(chapterCount)
-chapterCountOverlay.isVisible = text != null
-chapterCountOverlay.text = text ?: ""
-*/
-
-fun getChapterProgressText(current: Int?, total: Int?): String? {
-    return if (current != null && current > 0 && total != null && total > 0) {
-        "$current / $total"
-    } else {
-        null
-    }
-}
-/*
-use
-val text = LibraryHelper.getChapterProgressText(chapterCount, item.downloadedTotal)
-
-chapterCountOverlay.isVisible = text != null
-chapterCountOverlay.text = text ?: ""
-*/
-
-fun getChapterCountFromString(raw: String?): String? {
-    if (raw.isNullOrBlank()) return null
-
-    val num = raw.toIntOrNull()
-
-    return when {
-        num == null -> "$raw ch"          // Ej: "V5 46"
-        num > 0     -> "$num ch"          // Ej: "32"
-        num == 0    -> null               // Ocultar si es 0
-        else        -> "$raw ch"          // fallback
-    }
-}
-/*
-use
-val text = LibraryHelper.getChapterCountFromString(chapterCountStr)
-
-chapterCountOverlay.isVisible = text != null
-chapterCountOverlay.text = text ?: ""
-
-
-*/
-//fin
-enum class ChapterCountFilter(val min: Int?, val max: Int?) {
-    ALL(null, null),
-    LESS_THAN_100(null, 100),
-    GREATER_EQUAL_100(100, null),
-    GREATER_EQUAL_200(200, null),
-    GREATER_EQUAL_300(300, null),
-    GREATER_EQUAL_400(400, null),
-    GREATER_EQUAL_500(500, null),
-}
-
- /*   enum class ChapterCountFilter(val displayName: String) {
+    enum class ChapterCountFilter(val displayName: String) {
         ALL("all"),
         LESS_THAN_100("<100"),
         GREATER_EQUAL_100(">100"),
@@ -166,26 +107,10 @@ enum class ChapterCountFilter(val min: Int?, val max: Int?) {
         GREATER_EQUAL_300(">300"),
         GREATER_EQUAL_400(">400"),
         GREATER_EQUAL_500(">500")
-    }*/
-    
-    
+    }
     fun getChapterFiltersList(): List<Pair<String, String>> {
         return ChapterCountFilter.values().map { it.displayName to it.name }
     }
-    
-
-fun isChapterCountInRange(count: Int, filter: ChapterCountFilter): Boolean {
-    val min = filter.min
-    val max = filter.max
-
-    if (min != null && count < min) return false
-    if (max != null && count >= max) return false
-
-    return true
-}
-
-/*
-    
     fun isChapterCountInRange(filter: ChapterCountFilter, countString: String): Boolean {
         val count = countString.toIntOrNull() ?: 0
         return when (filter) {
@@ -197,8 +122,10 @@ fun isChapterCountInRange(count: Int, filter: ChapterCountFilter): Boolean {
             ChapterCountFilter.GREATER_EQUAL_400 -> count >= 400
             ChapterCountFilter.GREATER_EQUAL_500 -> count >= 500
         }
-
     }
-    
-     */
+
+    fun getLastReadChapterIndex(bookName: String): Int {
+        val k=getKey<Int>(EPUB_CURRENT_POSITION, bookName) ?:0
+        return k+1
+    }
 }
