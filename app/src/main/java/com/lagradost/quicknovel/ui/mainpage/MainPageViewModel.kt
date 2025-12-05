@@ -50,6 +50,11 @@ class MainPageViewModel : ViewModel() {
         MutableLiveData<Int>(null)
     }
 
+    //new
+    val currentChapterCountFilter: MutableLiveData<Int> by lazy {
+        MutableLiveData<Int>(null)
+      }
+
     val loadingMoreItems: MutableLiveData<Boolean> by lazy {
         MutableLiveData<Boolean>(false)
     }
@@ -110,7 +115,8 @@ class MainPageViewModel : ViewModel() {
     fun init(
         apiName: String, mainCategory: Int?,
         orderBy: Int?,
-        tag: Int?
+        tag: Int?,
+        chapterCountFilter:Int?=null
     ) {
         if (hasInit) return
         hasInit = true
@@ -179,6 +185,7 @@ class MainPageViewModel : ViewModel() {
             currentTag.postValue(tag)
             currentOrderBy.postValue(orderBy)
             currentMainCategory.postValue(mainCategory)
+            currentChapterCountFilter.postValue(chapterCountFilter)
         }
     }
 }
