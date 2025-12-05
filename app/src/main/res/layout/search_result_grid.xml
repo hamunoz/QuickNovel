@@ -18,7 +18,6 @@
             app:cardElevation="0dp"
             app:cardCornerRadius="@dimen/roundedImageRadius"
             android:id="@+id/backgroundCard"
-            android:foreground="?android:attr/selectableItemBackgroundBorderless"
             app:cardBackgroundColor="?attr/primaryGrayBackground">
 
         <!-- Wrap image in a FrameLayout so we can overlay text -->
@@ -32,8 +31,7 @@
                     android:id="@+id/imageView"
                     android:scaleType="centerCrop"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:foreground="?android:attr/selectableItemBackgroundBorderless"
+                    android:layout_height="match_parent"                    
                     android:contentDescription="@string/poster_descript" />
 
             <!-- Chapter count overlay -->
