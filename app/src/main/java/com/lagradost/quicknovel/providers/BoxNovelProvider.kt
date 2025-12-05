@@ -1,5 +1,6 @@
 package com.lagradost.quicknovel.providers
 
+import android.util.Log
 import com.lagradost.quicknovel.*
 import com.lagradost.quicknovel.MainActivity.Companion.app
 import org.jsoup.Jsoup
@@ -87,8 +88,21 @@ abstract class BoxNovelProvider : MainAPI() {
                 url = imageHeader.attr("href") ?: return@mapNotNull null
             ) {
                 val sum = h.selectFirst("div.item-summary")
-                latestChapter =
-                    sum?.selectFirst("> div.list-chapter > div.chapter-item > span > a")?.text()
+                // latest chapter text (could be "Chapter 698" or "Volume 5 Chapter 46")
+                val latestChapterText =sum?.selectFirst("> div.list-chapter > div.chapter-item > span > a")?.text()
+
+                latestChapter =latestChapterText
+
+                // Extract all numbers
+                val numbers = Regex("\\d+").findAll(latestChapterText ?: "").map { it.value }.toList()
+                // Build a string like "V5 46" if multiple numbers, or just "698" if single
+                val totalChapters = when {
+                    numbers.size >= 2 -> "V${numbers.first()} ${numbers.last()}"
+                    numbers.size == 1 -> numbers.first()
+                    else -> ""
+                }
+                totalChapterCount=totalChapters
+
                 rating =
                     (sum?.selectFirst("> div.rating > div.post-total-rating > span.score")?.text()
                         ?.toFloat()?.times(200))?.toInt()
@@ -134,6 +148,17 @@ abstract class BoxNovelProvider : MainAPI() {
             val ratingTxt =
                 meta?.selectFirst("> div.rating > div.post-total-rating > span.total_votes")?.text()
 
+            // Latest chapter text
+            val latestChapterText = h.selectFirst("div.meta-item.latest-chap a")?.text()
+            // Extract all numbers
+            val numbers = Regex("\\d+").findAll(latestChapterText ?: "").map { it.value }.toList()
+            // Build string like "V5 46"
+            val totalChapters = when {
+                numbers.size >= 2 -> "V${numbers.first()} ${numbers.last()}"
+                numbers.size == 1 -> numbers.first()
+                else -> ""
+            }
+
             newSearchResponse(name = name, url = url ?: return@mapNotNull null) {
                 posterUrl =
                     fixUrlNull(h.selectFirst("> div > div.tab-thumb > a > img")?.let{if(it.hasAttr("data-src")) it.attr("data-src") else it.attr("src")})
@@ -143,6 +168,7 @@ abstract class BoxNovelProvider : MainAPI() {
                     null
                 }
                 meta?.selectFirst("> div.latest-chap > span.chapter > a")?.text()
+                totalChapterCount=totalChapters
             }
         }
     }
@@ -204,7 +230,10 @@ abstract class BoxNovelProvider : MainAPI() {
             }
             setStatus(document.select("div.post-status > div.post-content_item > div.summary-content")
                 .last()?.text())
-            posterUrl = fixUrlNull(document.select("div.summary_image > a > img").attr("data-src"))
+            posterUrl = fixUrlNull(
+                document.selectFirst("div.summary_image > a > img")
+                    ?.let { if (it.hasAttr("data-src")) it.attr("data-src") else it.attr("src") }
+            )
             rating = ((document.selectFirst("span#averagerate")?.text()?.toFloatOrNull()
                 ?: 0f) * 200).toInt()
 
