@@ -1,8 +1,27 @@
 package com.lagradost.quicknovel.providers
 
+import android.content.Context
+import android.util.Log
 import com.lagradost.quicknovel.*
 import org.jsoup.Jsoup
 import com.lagradost.quicknovel.MainActivity.Companion.app
+import com.lagradost.quicknovel.utils.GrayCitySessionProvider
+
+import android.webkit.CookieManager
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
+
+data class BookDetails(
+    val title: String,
+    val author: String,
+    val description: String,
+    val posterUrl: String
+)
 
 open class ReadfromnetProvider : MainAPI() {
     override val name = "ReadFrom.Net"
@@ -12,6 +31,9 @@ open class ReadfromnetProvider : MainAPI() {
     override val iconId = R.drawable.icon_readfromnet
 
     override val iconBackgroundId = R.color.wuxiaWorldOnlineColor
+
+    private val bookDetailsCache = mutableMapOf<String, BookDetails>()
+
 
     override val tags = listOf(
         "Romance" to "romance",
@@ -1365,8 +1387,74 @@ open class ReadfromnetProvider : MainAPI() {
     ).sortedBy { it.first }.let { listOf("All" to "allbooks") + it }
 
     private val baseHeaders = mapOf(
-        "User-Agent" to "Mozilla/5.0"
+        "User-Agent" to "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36",
+        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Language" to "en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7,ml;q=0.6",
+        "Upgrade-Insecure-Requests" to "1",
+        "Cache-Control" to "no-cache",
+        "Pragma" to "no-cache",
+        "Accept-Encoding" to "gzip, deflate, br, zstd"
+
     )
+
+    /** Helper to get JS-rendered HTML from WebView with cookies */
+    private suspend fun getRenderedHtmlFromWebView(url: String): String {
+        // Get the session cookie before starting WebView
+        val savedCookie = try {
+            GrayCitySessionProvider.getSessionCookie(MainActivity.context)
+        } catch (e: Exception) {
+            ""
+        }
+
+        return withContext(Dispatchers.Main) {
+            suspendCoroutine { cont ->
+                var isResumed = AtomicBoolean(false)
+
+                val webView = WebView(MainActivity.context)
+                val cookieManager = CookieManager.getInstance()
+                cookieManager.setAcceptCookie(true)
+                cookieManager.setAcceptThirdPartyCookies(webView, true)
+
+
+                if (!savedCookie.isNullOrBlank()) {
+                    cookieManager.setCookie(mainUrl, savedCookie)
+                    Log.d("GrayCity", "Injected saved cookie: $savedCookie")
+                }
+
+                webView.settings.javaScriptEnabled = true
+                webView.settings.domStorageEnabled = true
+
+                webView.webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView?, finishedUrl: String?) {
+                        if (isResumed.get()) return
+
+                        if (savedCookie.isNullOrBlank())
+                        {
+                            // Save any updated cookie for future reuse
+                            val newCookie = cookieManager.getCookie(mainUrl)
+                            if (!newCookie.isNullOrBlank() && newCookie.contains("PHPSESSID")) {
+                                GrayCitySessionProvider.saveSessionCookie(MainActivity.context, newCookie)
+                                Log.d("GrayCity", "Saved updated cookie: $newCookie")
+                            }
+                        }
+
+                        view?.evaluateJavascript(
+                            "(function() { return document.documentElement.outerHTML; })();"
+                        ) { html ->
+                            if (isResumed.compareAndSet(false, true)) {
+                                cont.resume(html)
+                                webView.destroy()
+                            }
+                        }
+                    }
+                }
+
+                webView.loadUrl(url)
+            }
+        }
+    }
+
+
 
     override suspend fun loadMainPage(
         page: Int,
@@ -1375,26 +1463,49 @@ open class ReadfromnetProvider : MainAPI() {
         tag: String?
     ): HeadMainPageResponse {
         val url = "$mainUrl/$tag/page/$page/"
-        val document = app.get(
-            url, headers = baseHeaders
-        ).document
 
-        val returnValue = document.select("div.box_in").mapNotNull { h ->
-            val name = h?.selectFirst("h2")?.text() ?: return@mapNotNull null
-            val cUrl = h.selectFirst(" div > h2.title > a ")?.attr("href") ?: return@mapNotNull null
+        val html = getRenderedHtmlFromWebView(url)
+
+        val stripped = html.substring(1, html.length - 1)
+            .replace("\\u003C", "<")
+            .replace("\\n", "\n")
+            .replace("\\\"", "\"")
+            .replace("&gt;", ">")
+            .replace("&lt;", "<")
+            .replace("&amp;", "&")
+
+        val document = Jsoup.parse(stripped)
+
+        val items = document.select("div.box_in").mapNotNull { h ->
+            val name = h.selectFirst("h2")?.text() ?: return@mapNotNull null
+            val cUrl = h.selectFirst("div > h2.title > a")?.attr("href") ?: return@mapNotNull null
+            val author = h.selectFirst("h4 a")?.text()?: return@mapNotNull null
+            val description = h.selectFirst("div.text3 span.coll-hidden")?.text()?.trim()?: return@mapNotNull null
+            val poster = fixUrlNull(h.selectFirst("div > a.highslide > img")?.attr("src"))?: return@mapNotNull null
+
+            bookDetailsCache[cUrl] = BookDetails(name, author, description, poster)
+
 
             newSearchResponse(name = name, url = cUrl) {
-                posterUrl = fixUrlNull(h.selectFirst("div > a.highslide > img")?.attr("src"))
+                posterUrl = poster
             }
         }
-        return HeadMainPageResponse(url, returnValue)
+        return HeadMainPageResponse(url, items)
     }
 
     override suspend fun loadHtml(url: String): String? {
-        val document = app.get(url, headers = baseHeaders).document
+        val html = getRenderedHtmlFromWebView(url)
+        val stripped = html.substring(1, html.length - 1)
+            .replace("\\u003C", "<")
+            .replace("\\n", "\n")
+            .replace("\\\"", "\"")
+            .replace("&gt;", ">")
+            .replace("&lt;", "<")
+            .replace("&amp;", "&")
+        val document = Jsoup.parse(stripped)
         document.select("div.splitnewsnavigation").remove()
         document.select("div.splitnewsnavigation2").remove()
-        return document.selectFirst("#textToRead")?.html()
+        return document.selectFirst("#textToRead")?.html()?.replace("\t", " ")?.trim()
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -1422,49 +1533,53 @@ open class ReadfromnetProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val response = app.get(url, headers = baseHeaders)
+        val html = getRenderedHtmlFromWebView(url)
 
-        val document = Jsoup.parse(response.text)
-        val name =
-            document.selectFirst(" h2 ")?.text()?.substringBefore(", page")?.substringBefore("#")
-                ?: return null
+        val cached = bookDetailsCache[url]
 
-        val data: ArrayList<ChapterData> = ArrayList()
-        val chapters = document.select("div.splitnewsnavigation2.ignore-select > center > div > a")
+        val stripped = html.substring(1, html.length - 1)
+            .replace("\\u003C", "<")
+            .replace("\\n", "\n")
+            .replace("\\\"", "\"")
+            .replace("&gt;", ">")
+            .replace("&lt;", "<")
+            .replace("&amp;", "&")
 
-        data.add(
-            newChapterData(
-                name = "page 1",
-                url = url.substringBeforeLast("/") + "/page,1," + url.substringAfterLast("/"),
+        val document = Jsoup.parse(stripped)
+
+
+        val name = cached?.title ?: return null
+
+        val author = cached?.author ?: return null
+
+        val description = cached?.description ?: return null
+
+        val poster = cached?.posterUrl?: return null
+
+
+        val data = arrayListOf<ChapterData>()
+
+        // Extract the page numbers from the hidden span
+        val pagesText = document.selectFirst("div.splitnewsnavigation2 .coll-hidden")?.text()?.trim()
+        val pageNumbers = pagesText?.split("\\s+".toRegex())?.mapNotNull { it.toIntOrNull() } ?: emptyList()
+
+        for (page in pageNumbers) {
+            val pageUrl = url.substringBeforeLast("/") + "/page,$page," + url.substringAfterLast("/")
+            data.add(
+                newChapterData(
+                    name = "page $page",
+                    url = pageUrl
+                )
             )
-        )
-
-        for (c in 0..(chapters.size / 2)) {
-            if (chapters[c].attr("href").contains("category").not()) {
-                val cUrl = chapters[c].attr("href")
-                val cName = "page " + chapters[c].text()
-                data.add(newChapterData(name = cName, url = cUrl))
-            }
         }
 
-        data.sortWith { first, second ->
-            if (first.name.substringAfter(" ") != second.name.substringAfter(" ")) {
-                first.name.substringAfter(" ").toInt() - second.name.substringAfter(" ").toInt()
-            } else {
-                first.name.compareTo(second.name)
-            }
-        }
+        // Sort by page number just in case
+        data.sortBy { it.name.substringAfter(" ").toInt() }
 
         return newStreamResponse(url = url, name = name, data = data.distinctBy { it.url }) {
-            author =
-                document.selectFirst("#dle-speedbar > div > div > ul > li:nth-child(3) > a > span")
-                    ?.text()
-
-            posterUrl =
-                fixUrlNull(
-                    document.selectFirst("div.box_in > center > div > a > img")
-                        ?.attr("src")
-                )
+            this.author =author
+            this.posterUrl =poster
+            this.synopsis=description
         }
     }
 }
