@@ -1,6 +1,7 @@
 package com.lagradost.quicknovel.providers
 
 import android.annotation.SuppressLint
+import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.quicknovel.ErrorLoadingException
 import com.lagradost.quicknovel.HeadMainPageResponse
@@ -290,6 +291,11 @@ class RoyalRoadProvider : MainAPI() {
                 } catch (_: Throwable) {
                     null
                 }
+                //new
+       val stats = h.select("div.stats > div.col-sm-6 > span")
+                val chapterCount = stats.getOrNull(4)?.text()?.substringBefore(" ")
+                totalChapterCount=chapterCount
+            //end
                 rating =
                     head.selectFirst("> div.stats")?.select("> div")?.get(1)?.selectFirst("> span")
                         ?.attr("title")?.toFloatOrNull()?.times(200)?.toInt()
@@ -316,6 +322,11 @@ class RoyalRoadProvider : MainAPI() {
                     head.selectFirst("> div.stats")?.select("> div")?.get(1)?.selectFirst("> span")
                         ?.attr("title")?.toFloatOrNull()?.times(200)?.toInt()
                 // latestChapter = h.select("div.stats > div.col-sm-6 > span")[4].text()
+           //new
+            val chapterCountText = h.selectFirst("div.stats div.col-sm-6:has(i.fa-list) span")?.text()
+                val chapterCount = chapterCountText?.substringBefore(" ")
+                totalChapterCount=chapterCount
+                //end
             }
         }
     }

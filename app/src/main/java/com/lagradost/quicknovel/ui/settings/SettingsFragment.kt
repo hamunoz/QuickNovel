@@ -429,6 +429,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 prefNames.toList(),
                 prefValues.indexOf(currentLayout),
                 getString(R.string.theme),
+                //new
+                getString(R.string.library_display_mode),
                 false,
                 {}) {
                 try {

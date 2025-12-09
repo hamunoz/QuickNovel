@@ -11,6 +11,7 @@ import androidx.core.view.isVisible
 import com.lagradost.quicknovel.BaseApplication.Companion.getKey
 import com.lagradost.quicknovel.DOWNLOAD_EPUB_SIZE
 import com.lagradost.quicknovel.DownloadState
+import com.lagradost.quicknovel.LibraryHelper
 import com.lagradost.quicknovel.R
 import com.lagradost.quicknovel.databinding.DownloadImportBinding
 import com.lagradost.quicknovel.databinding.DownloadImportCardBinding
@@ -157,7 +158,10 @@ class AnyAdapter(
                 val card = item as ResultCached
                 view.apply {
                     imageText.text = card.name
-                    historyExtraText.text = "${card.totalChapters} Chapters"
+                    //new
+                    val lastchap=LibraryHelper.getLastReadChapterIndex(item.name)
+                    historyExtraText.text = "${lastchap}/${card.totalChapters} Chapters"
+                  
                     imageView.setImage(card.poster)
 
                     historyPlay.setOnClickListener {
@@ -229,6 +233,31 @@ class AnyAdapter(
                                 item.image,
                             ) // skipCache = false
                             imageText.text = item.name
+                             l
+                        //new
+                          val chapterCountStr = item.totalChapters.toString()
+
+                            if (!chapterCountStr.isNullOrBlank())
+                            {
+                                val chapterCount = chapterCountStr.toIntOrNull()
+                                val lastchap=LibraryHelper.getLastReadChapterIndex(item.name)
+
+                                chapterCountOverlay.isVisible = true
+                                chapterCountOverlay.text = if (chapterCount != null && chapterCount > 0) {
+                                    "${lastchap}/${chapterCount}"
+                                }
+                                else {
+                                    if(chapterCount==0){
+                                        chapterCountOverlay.isVisible = false
+                                    }
+                                    "$chapterCountStr" // fallback to string like "V5 46"
+                                }
+                            }
+                            else
+                            {
+                                chapterCountOverlay.isVisible = false
+                            }   
+                            
                             imageTextMore.isVisible = false
                         }
                     }

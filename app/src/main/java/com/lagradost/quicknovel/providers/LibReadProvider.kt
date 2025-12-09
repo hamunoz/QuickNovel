@@ -1,5 +1,6 @@
 package com.lagradost.quicknovel.providers
 
+import android.util.Log
 import com.lagradost.quicknovel.*
 import com.lagradost.quicknovel.MainActivity.Companion.app
 import org.jsoup.Jsoup
@@ -56,12 +57,6 @@ open class LibReadProvider : MainAPI() {
         "Yaoi" to "Yaoi"
     )
 
-    override val orderBys = listOf(
-        "Latest Release" to "latest-release",
-        "Latest Novels" to "latest-novel",
-        "Completed Novels" to "completed-novel"
-    )
-
     override suspend fun loadMainPage(
         page: Int,
         mainCategory: String?,
@@ -69,17 +64,25 @@ open class LibReadProvider : MainAPI() {
         tag: String?
     ): HeadMainPageResponse {
         val url =
-            if (tag.isNullOrBlank()) "$mainUrl/sort/${orderBy ?: "latest-release"}/$page" else "$mainUrl/genre/$tag/$page"
+            if (tag.isNullOrBlank()) "$mainUrl/sort/latest-release/$page" else "$mainUrl/genre/$tag/$page"
         val document = app.get(url).document
         val headers = document.select("div.ul-list1.ul-list1-2.ss-custom > div.li-row")
         val returnValue = headers.mapNotNull { h ->
             val h3 = h.selectFirst("h3.tit > a") ?: return@mapNotNull null
+
+            val latestChapterCount = h.selectFirst("div.item a[href*=/chapter-]")?.attr("href")
+                ?.substringAfterLast("chapter-")
+                ?.takeWhile { it.isDigit() }
+                ?.toIntOrNull()
+                ?.toString()
+
             newSearchResponse(
                 name = h3.attr("title"),
                 url = h3.attr("href") ?: return@mapNotNull null
             ) {
                 posterUrl = fixUrlNull(h.selectFirst("div.pic > a > img")?.attr("src"))
                 latestChapter = h.select("div.item")[2].selectFirst("> div > a")?.text()
+                totalChapterCount=latestChapterCount
             }
         }
         return HeadMainPageResponse(url, returnValue)
@@ -116,12 +119,19 @@ open class LibReadProvider : MainAPI() {
         return document.select("div.li-row > div.li > div.con").mapNotNull { h ->
             val h3 = h.selectFirst("div.txt > h3.tit > a") ?: return@mapNotNull null
 
+            val latestChapterCount = h.selectFirst("div.item a[href*=/chapter-]")?.attr("href")
+                ?.substringAfterLast("chapter-")
+                ?.takeWhile { it.isDigit() }
+                ?.toIntOrNull()
+                ?.toString()
+
             newSearchResponse(
                 name = h3.attr("title") ?: return@mapNotNull null,
                 url = h3.attr("href") ?: return@mapNotNull null
             ) {
-                posterUrl = fixUrlNull(h.selectFirst("div.pic > img")?.attr("src"))
+                posterUrl = fixUrlNull(h.selectFirst("div.pic > a > img")?.attr("src"))
                 //latestChapter = h.select("div.item")[2].selectFirst("> div > a")?.text()
+                totalChapterCount=latestChapterCount
             }
         }
     }

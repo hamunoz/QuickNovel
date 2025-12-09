@@ -1,4 +1,4 @@
-package com.lagradost.quicknovel
+0package com.lagradost.quicknovel
 
 import androidx.annotation.StringRes
 import androidx.annotation.WorkerThread
@@ -181,6 +181,8 @@ data class SearchResponse(
     var latestChapter: String? = null,
     val apiName: String,
     var posterHeaders: Map<String, String>? = null
+    var totalChapterCount:String? = null,
+    var bookReadStatus:String?=null,
 ) {
     val image get() = img(posterUrl, posterHeaders)
 }
@@ -191,8 +193,9 @@ fun MainAPI.newSearchResponse(
     fix: Boolean = true,
     initializer: SearchResponse.() -> Unit = { },
 ): SearchResponse {
+    val myReadStatus=LibraryHelper.getBookmarkForBook(name)
     val builder =
-        SearchResponse(name = name, url = if (fix) fixUrl(url) else url, apiName = this.name)
+        SearchResponse(name = name, url = if (fix) fixUrl(url) else url, apiName = this.name, totalChapterCount = chapterCount, bookReadStatus = myReadStatus)
     builder.initializer()
 
     return builder

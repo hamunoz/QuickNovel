@@ -21,6 +21,22 @@ open class HiraethTranslationProvider : MainAPI() {
         "New" to "new-manga",
     )
 
+    fun parseChapterNumber(chapterText: String?): String? {
+        if (chapterText.isNullOrBlank()) return null
+
+        val volumeRegex = Regex("(?:Vol(?:ume)?\\.?\\s*)(\\d+)", RegexOption.IGNORE_CASE)
+        val chapterRegex = Regex("(?:Ch(?:apter)?\\.?\\s*)(\\d+)", RegexOption.IGNORE_CASE)
+
+        val volume = volumeRegex.find(chapterText)?.groupValues?.get(1)
+        val chapter = chapterRegex.find(chapterText)?.groupValues?.get(1)
+
+        return when {
+            volume != null && chapter != null -> "v$volume $chapter"
+            chapter != null -> "$chapter"
+            else -> null
+        }
+    }
+
     override suspend fun loadMainPage(
         page: Int,
         mainCategory: String?,
@@ -33,9 +49,15 @@ open class HiraethTranslationProvider : MainAPI() {
         val returnValue =
             headers.mapNotNull { h ->
                 val h3 = h.selectFirst("h3.h4 > a") ?: return@mapNotNull null
+                val chapterText=h.select("div.latest-chap > span.chapter > a").text()
+
+                val chapterNum = parseChapterNumber(chapterText)
+
+
                 newSearchResponse(name = h3.text(), url = h3.attr("href") ?: return@mapNotNull null) {
                     posterUrl = fixUrlNull(h.selectFirst("div.c-image-hover > a > img")?.attr("src"))
-                    latestChapter = h.select("div.latest-chap > span.chapter > a").text()
+                    latestChapter = chapterText
+                    totalChapterCount=chapterNum
                 }
             }
         return HeadMainPageResponse(url, returnValue)
@@ -61,13 +83,16 @@ open class HiraethTranslationProvider : MainAPI() {
 
         return document.select("div.c-tabs-item > div.row.c-tabs-item__content").mapNotNull { h ->
             val h3 = h.selectFirst("h3.h4 > a") ?: return@mapNotNull null
+            val chapterText=h.select("div.latest-chap > span.chapter > a").text()
 
+            val chapterNum = parseChapterNumber(chapterText)
             newSearchResponse(
                 name = h3.text() ?: return@mapNotNull null,
                 url = h3.attr("href") ?: return@mapNotNull null
             ) {
                 posterUrl = fixUrlNull(h.selectFirst("div.c-image-hover > a > img")?.attr("src"))
-                latestChapter = h.select("div.latest-chap > span.chapter > a").text()
+                latestChapter = chapterText
+                totalChapterCount=chapterNum
             }
         }
     }
