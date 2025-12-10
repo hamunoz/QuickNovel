@@ -26,6 +26,7 @@ class WuxiaBoxProvider :  MainAPI() {
     override val mainCategories = listOf(
         "All" to "all",
         "Completed" to "Completed",
+        "Complete" to "Complete",
         "Ongoing" to "Ongoing"
     )
     override val tags = listOf(
@@ -203,7 +204,7 @@ class WuxiaBoxProvider :  MainAPI() {
         }
 
 
-        val status = document.selectFirst("div.header-stats strong:matches(Ongoing|Completed)")?.text()
+        val status = document.selectFirst("div.header-stats strong:matches(Ongoing|Completed|Complete)")?.text()
 
 
         // Extract bookId from the novel URL
