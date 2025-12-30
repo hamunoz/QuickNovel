@@ -13,6 +13,7 @@ Main stuff is
 ![Screenshot_20251230_175522_QuickNovel](https://github.com/user-attachments/assets/f32675d9-b1a1-4958-b8cb-38fa8e8abb72)
 
 
+![Screenshot_20251230_180453_QuickNovel](https://github.com/user-attachments/assets/cbe2a50e-b4c7-42a7-a445-ecdaffcc8ded)
 
 
 # QuickNovel
