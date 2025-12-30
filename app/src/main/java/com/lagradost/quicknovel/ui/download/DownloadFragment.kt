@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.RecyclerView
@@ -20,6 +21,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.lagradost.quicknovel.BaseApplication.Companion.getKey
+import com.lagradost.quicknovel.BaseApplication.Companion.getKeys
 import com.lagradost.quicknovel.BaseApplication.Companion.setKey
 import com.lagradost.quicknovel.BookDownloader2
 import com.lagradost.quicknovel.BookDownloader2Helper
@@ -31,6 +33,7 @@ import com.lagradost.quicknovel.DOWNLOAD_SORTING_METHOD
 import com.lagradost.quicknovel.DOWNLOAD_UNREAD_ONLY_FILTER
 import com.lagradost.quicknovel.DOWNLOAD_COMPLETED_ONLY_FILTER
 import com.lagradost.quicknovel.DownloadState
+import com.lagradost.quicknovel.HISTORY_FOLDER
 import com.lagradost.quicknovel.MainActivity
 import com.lagradost.quicknovel.R
 import com.lagradost.quicknovel.databinding.FragmentDownloadsBinding
@@ -41,8 +44,10 @@ import com.lagradost.quicknovel.mvvm.safe
 import com.lagradost.quicknovel.ui.SortingMethodAdapter
 import com.lagradost.quicknovel.ui.UiImage
 import com.lagradost.quicknovel.ui.img
+import com.lagradost.quicknovel.util.ResultCached
 import com.lagradost.quicknovel.util.UIHelper.colorFromAttribute
 import com.lagradost.quicknovel.util.UIHelper.fixPaddingStatusbar
+import com.lagradost.quicknovel.util.UIHelper.setImage
 import com.lagradost.safefile.MimeTypes
 import com.lagradost.safefile.SafeFile
 import kotlinx.coroutines.launch
@@ -179,6 +184,8 @@ class DownloadFragment : Fragment() {
         activity?.fixPaddingStatusbar(binding.downloadRoot)
         //viewModel = ViewModelProviders.of(activity!!).get(DownloadViewModel::class.java)
 
+        // Load blurred background from last read novel
+        loadBackgroundFromLastRead()
 
         searchExitIcon =
             binding.downloadSearch.findViewById(androidx.appcompat.R.id.search_close_btn)
@@ -347,5 +354,33 @@ class DownloadFragment : Fragment() {
                 bookmarkAdapter.submitList(cards.map { it.copy() })
             }
         }*/
+    }
+
+    private fun loadBackgroundFromLastRead() {
+        try {
+            // Get the most recently read novel from history
+            val historyKeys = getKeys(HISTORY_FOLDER) ?: return
+            var lastRead: ResultCached? = null
+            var lastTime = 0L
+            
+            for (key in historyKeys) {
+                val cached = getKey<ResultCached>(key) ?: continue
+                if (cached.cachedTime > lastTime) {
+                    lastTime = cached.cachedTime
+                    lastRead = cached
+                }
+            }
+            
+            lastRead?.poster?.let { posterUrl ->
+                binding.downloadBackgroundBlur.setImage(
+                    img(posterUrl),
+                    radius = 100,
+                    sample = 3
+                )
+                binding.downloadBackgroundBlur.isVisible = true
+            }
+        } catch (e: Exception) {
+            logError(e)
+        }
     }
 }

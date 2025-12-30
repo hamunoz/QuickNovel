@@ -1,19 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
         xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:id="@+id/downloadRoot"
-        android:background="?attr/primaryGrayBackground"
-        android:orientation="vertical">
+        android:background="?attr/primaryBlackBackground">
 
-    <FrameLayout
-            android:visibility="visible"
-            android:layout_height="40dp"
-            android:layout_margin="10dp"
-            android:background="@drawable/search_background"
-            android:layout_width="match_parent">
+    <ImageView
+            android:id="@+id/download_background_blur"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:alpha="0.3"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:contentDescription="@string/background_image_descript" />
+
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:orientation="vertical">
+
+        <FrameLayout
+                android:visibility="visible"
+                android:layout_height="40dp"
+                android:layout_margin="10dp"
+                android:background="@drawable/search_background"
+                android:layout_width="match_parent">
 
         <androidx.appcompat.widget.SearchView
                 android:animateLayoutChanges="true"
@@ -95,7 +110,7 @@
             android:layout_height="wrap_content">
 
         <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-                android:background="?attr/primaryBlackBackground"
+                android:background="@android:color/transparent"
 
                 android:id="@+id/swipe_container"
                 android:layout_width="match_parent"
@@ -106,6 +121,7 @@
                     android:id="@+id/viewpager"
                     android:paddingBottom="40dp"
                     android:clipToPadding="false"
+                    android:background="@android:color/transparent"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     tools:listitem="@layout/viewpager_page" />
@@ -117,7 +133,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
                 android:layout_gravity="bottom"
-                android:background="?attr/primaryGrayBackground"
+                android:background="#59000000"
                 android:descendantFocusability="blocksDescendants"
                 android:focusable="false"
                 android:paddingHorizontal="5dp"
@@ -151,4 +167,5 @@
                 android:layout_marginEnd="16dp"
                 android:layout_marginBottom="56dp" />
     </FrameLayout>
-</LinearLayout>
+    </LinearLayout>
+</FrameLayout>

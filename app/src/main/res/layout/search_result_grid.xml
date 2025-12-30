@@ -19,7 +19,7 @@
             app:cardElevation="0dp"
             app:cardCornerRadius="@dimen/roundedImageRadius"
             android:id="@+id/backgroundCard"
-            app:cardBackgroundColor="?attr/primaryGrayBackground">
+            app:cardBackgroundColor="#59000000">
         <!-- USING CROP RATIO (182/268), centerCrop for fill -->
         <ImageView
                 android:duplicateParentState="true"
