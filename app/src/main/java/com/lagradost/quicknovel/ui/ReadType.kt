@@ -9,7 +9,8 @@ enum class ReadType(val prefValue: Int, @StringRes val stringRes: Int) {
     DROPPED(2, R.string.type_dropped),
     COMPLETED(3, R.string.type_completed),
     ON_HOLD(4, R.string.type_on_hold),
-    READING(5, R.string.type_reading);
+    READING(5, R.string.type_reading),
+    TRASH(6, R.string.type_trash);
 
     companion object {
         fun fromSpinner(position: Int?) = values().find { value -> value.prefValue == position } ?: NONE

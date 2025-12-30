@@ -421,6 +421,79 @@ object BookDownloader2Helper {
         }
     }
 
+    /**
+     * Count cached chapters without requiring DOWNLOAD_TOTAL to be set.
+     * Uses the provided total from the loaded novel data.
+     */
+    fun countCachedChapters(
+        context: Context?,
+        author: String?,
+        name: String,
+        apiName: String,
+        total: Int
+    ): DownloadProgress? {
+        if (context == null || total <= 0) return null
+
+        try {
+            val sApiname = sanitizeFilename(apiName)
+            val sAuthor = if (author == null) "" else sanitizeFilename(author)
+            val sName = sanitizeFilename(name)
+            val id = generateId(apiName, author, name)
+
+            val epub = File(
+                context.filesDir.toString() + getDirectory(
+                    sApiname,
+                    sAuthor,
+                    sName
+                ), LOCAL_EPUB
+            )
+
+            val (count, downloaded) =
+                if (epub.exists()) {
+                    val length = epub.length()
+                    if (length > LOCAL_EPUB_MIN_SIZE) {
+                        total to total
+                    } else {
+                        0 to 0
+                    }
+                } else {
+                    val existingFiles = File(
+                        context.filesDir.toString() + getDirectory(
+                            sApiname,
+                            sAuthor,
+                            sName
+                        )
+                    ).listFiles()?.mapNotNull { it.nameWithoutExtension.toIntOrNull() }?.sorted()
+
+                    if (existingFiles.isNullOrEmpty()) {
+                        0 to 0
+                    } else {
+                        // Count all cached chapter files
+                        val cachedCount = existingFiles.size
+                        // Find highest continuous sequence for "progress"
+                        val start = getKey<Int>(DOWNLOAD_OFFSET, id.toString()) ?: 0
+                        val startIndex = maxOf(existingFiles.indexOfFirst { x -> x >= start }, 0)
+                        var last = existingFiles[startIndex]
+                        var downloads = startIndex + 1
+                        for (i in startIndex + 1 until existingFiles.size) {
+                            if (existingFiles[i] == last + 1) {
+                                downloads += 1
+                                last = existingFiles[i]
+                            } else {
+                                break
+                            }
+                        }
+                        (last + 1) to cachedCount
+                    }
+                }
+            
+            if (count <= 0) return null
+            return DownloadProgress(count.toLong(), total.toLong(), downloaded.toLong())
+        } catch (e: Exception) {
+            return null
+        }
+    }
+
     fun openQuickStream(activity: Activity?, uri: Uri?) {
         if (uri == null || activity == null) return
         val myIntent = Intent(activity, ReadActivity2::class.java)

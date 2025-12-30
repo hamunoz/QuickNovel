@@ -28,7 +28,10 @@ import com.lagradost.quicknovel.CommonActivity.activity
 import com.lagradost.quicknovel.DOWNLOAD_NORMAL_SORTING_METHOD
 import com.lagradost.quicknovel.DOWNLOAD_SETTINGS
 import com.lagradost.quicknovel.DOWNLOAD_SORTING_METHOD
+import com.lagradost.quicknovel.DOWNLOAD_UNREAD_ONLY_FILTER
+import com.lagradost.quicknovel.DOWNLOAD_COMPLETED_ONLY_FILTER
 import com.lagradost.quicknovel.DownloadState
+import com.lagradost.quicknovel.MainActivity
 import com.lagradost.quicknovel.R
 import com.lagradost.quicknovel.databinding.FragmentDownloadsBinding
 import com.lagradost.quicknovel.databinding.SortBottomSheetBinding
@@ -195,6 +198,10 @@ class DownloadFragment : Fragment() {
             }
         })
 
+        binding.downloadImportEpub.setOnClickListener {
+            MainActivity.importEpub()
+        }
+
 
         val adapter = ViewpagerAdapter(viewModel, this) { isScrollingDown ->
             if (isScrollingDown)
@@ -226,7 +233,6 @@ class DownloadFragment : Fragment() {
 
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab?) {
-                    binding.swipeContainer.isEnabled = binding.bookmarkTabs.selectedTabPosition == 0
                     viewModel.switchPage(binding.bookmarkTabs.selectedTabPosition)
                 }
 
@@ -250,6 +256,24 @@ class DownloadFragment : Fragment() {
                 DownloadViewModel.normalSortingMethods to DOWNLOAD_NORMAL_SORTING_METHOD
             }
             val current = (getKey<Int>(DOWNLOAD_SETTINGS, key) ?: DEFAULT_SORT)
+
+            binding.unreadOnlyToggle.apply {
+                visibility = if (isOnDownloads) View.GONE else View.VISIBLE
+                isChecked = getKey(DOWNLOAD_SETTINGS, DOWNLOAD_UNREAD_ONLY_FILTER, false) == true
+                setOnCheckedChangeListener { _, checked ->
+                    setKey(DOWNLOAD_SETTINGS, DOWNLOAD_UNREAD_ONLY_FILTER, checked)
+                    viewModel.resortAllData()
+                }
+            }
+
+            binding.completedOnlyToggle.apply {
+                visibility = if (isOnDownloads) View.GONE else View.VISIBLE
+                isChecked = getKey(DOWNLOAD_SETTINGS, DOWNLOAD_COMPLETED_ONLY_FILTER, false) == true
+                setOnCheckedChangeListener { _, checked ->
+                    setKey(DOWNLOAD_SETTINGS, DOWNLOAD_COMPLETED_ONLY_FILTER, checked)
+                    viewModel.resortAllData()
+                }
+            }
 
             val adapter = SortingMethodAdapter(current) { item, position, newId ->
                 setKey(DOWNLOAD_SETTINGS, key, newId)
@@ -287,16 +311,19 @@ class DownloadFragment : Fragment() {
             setColorSchemeColors(context.colorFromAttribute(R.attr.colorPrimary))
             setProgressBackgroundColorSchemeColor(context.colorFromAttribute(R.attr.primaryGrayBackground))
             setOnRefreshListener {
-                viewModel.refresh()
-                isRefreshing = false
+                viewModel.refreshCurrentTab()
             }
+        }
+
+        observe(viewModel.isRefreshing) { refreshing ->
+            binding.swipeContainer.isRefreshing = refreshing == true
         }
 
         binding.viewpager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageScrollStateChanged(state: Int) {
                 super.onPageScrollStateChanged(state)
                 binding.swipeContainer.isEnabled =
-                    isOnDownloads && state == ViewPager2.SCROLL_STATE_IDLE
+                    state == ViewPager2.SCROLL_STATE_IDLE
             }
         })
 

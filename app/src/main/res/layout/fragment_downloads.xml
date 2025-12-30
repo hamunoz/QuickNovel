@@ -21,6 +21,7 @@
                 app:queryBackground="@color/transparent"
                 app:searchIcon="@drawable/search_icon"
                 android:paddingStart="-10dp"
+                android:paddingEnd="30dp"
                 android:iconifiedByDefault="false"
                 app:queryHint="@string/search_hint"
                 android:layout_width="match_parent"
@@ -34,6 +35,19 @@
                         app:searchHintIcon="@drawable/search_white"
                         -->
         </androidx.appcompat.widget.SearchView>
+
+        <ImageView
+                android:id="@+id/download_import_epub"
+                android:background="?selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_baseline_add_24"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:layout_marginEnd="5dp"
+                android:layout_gravity="end|center_vertical"
+                app:tint="?attr/iconColor"
+                android:contentDescription="@string/import_epub" />
     </FrameLayout>
 
     <!--<com.google.android.material.appbar.AppBarLayout

@@ -2,6 +2,7 @@
 
 <androidx.cardview.widget.CardView xmlns:app="http://schemas.android.com/apk/res-auto"
         xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
         android:foreground="?android:attr/selectableItemBackgroundBorderless"
 
         android:layout_margin="2dp"
@@ -45,4 +46,23 @@
             android:paddingStart="5dp"
             android:paddingEnd="5dp"
             android:ellipsize="end" />
+
+    <TextView
+            android:id="@+id/unreadBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_margin="6dp"
+            android:background="@drawable/unread_badge_background"
+            android:gravity="center"
+            android:minWidth="20dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="visible"
+            tools:text="12" />
 </androidx.cardview.widget.CardView>

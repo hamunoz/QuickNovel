@@ -36,6 +36,25 @@
                     android:foreground="?android:attr/selectableItemBackgroundBorderless"
                     tools:ignore="RtlHardcoded"
                     android:contentDescription="@string/poster_open_source_descript" />
+
+            <TextView
+                    android:id="@+id/unreadBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="6dp"
+                    android:background="@drawable/unread_badge_background"
+                    android:gravity="center"
+                    android:minWidth="20dp"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:text="12" />
         </androidx.cardview.widget.CardView>
 
         <FrameLayout

@@ -160,6 +160,20 @@
         <item name="backgroundColor">@color/transparent</item>
     </style>
 
+    <style name="ChipOutlinedTransparent" parent="@style/Widget.Material3.Chip.Filter">
+        <item name="chipBackgroundColor">@color/transparent</item>
+        <item name="chipSurfaceColor">@color/transparent</item>
+        <item name="backgroundColor">@color/transparent</item>
+        <item name="chipStrokeColor">?attr/white</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="textColor">?attr/textColor</item>
+        <item name="android:textColor">?attr/textColor</item>
+        <item name="checkedIconTint">?attr/textColor</item>
+        <item name="fontFamily">@font/google_sans</item>
+        <item name="android:fontFamily">@font/google_sans</item>
+        <item name="chipMinTouchTargetSize">0dp</item>
+    </style>
+
     <style name="ChipParent">
         <item name="chipSpacingVertical">5dp</item>
         <item name="chipSpacingHorizontal">5dp</item>
@@ -327,6 +341,15 @@
         <item name="iconTint">?attr/textColor</item>
         <item name="android:textColor">?attr/textColor</item>
         <item name="rippleColor">?attr/textColor</item>
+    </style>
+
+    <style name="ResultOutlineButton" parent="NiceButton">
+        <item name="backgroundTint">@color/transparent</item>
+        <item name="strokeColor">@color/result_outline_button_stroke</item>
+        <item name="strokeWidth">2dp</item>
+        <item name="iconTint">@color/result_outline_button_icon</item>
+        <item name="android:textColor">@color/result_outline_button_text</item>
+        <item name="rippleColor">?attr/white</item>
     </style>
 
     <style name="WhiteCheckmark">

@@ -214,9 +214,9 @@
     <ImageView
             android:visibility="gone"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:alpha="0.3"
+            android:alpha="0.45"
             android:background="?attr/primaryBlackBackground"
             android:id="@+id/result_poster_blur"
             android:contentDescription="@string/background_image_descript" />
@@ -323,7 +323,7 @@
                         android:id="@+id/result_download_card"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/white_card">
+                        android:background="@android:color/transparent">
 
                     <LinearLayout
                             android:orientation="vertical"
@@ -335,19 +335,12 @@
                             android:id="@+id/result_scroll_padding"
                             android:paddingBottom="0dp">
 
-                        <androidx.cardview.widget.CardView
+                        <LinearLayout
                                 android:id="@+id/views_and_rating"
-                                app:cardCornerRadius="15dp"
                                 android:layout_width="match_parent"
                                 android:layout_height="60dp"
-                                android:elevation="0dp"
-                                android:backgroundTint="?attr/boxItemBackground">
-
-                            <LinearLayout
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:baselineAligned="false"
-                                    android:orientation="horizontal">
+                                android:baselineAligned="false"
+                                android:orientation="horizontal">
 
                                 <LinearLayout
                                         android:gravity="center"
@@ -400,8 +393,7 @@
                                             android:layout_width="match_parent"
                                             android:layout_height="wrap_content" />
                                 </LinearLayout>
-                            </LinearLayout>
-                        </androidx.cardview.widget.CardView>
+                                                </LinearLayout>
 
                         <com.google.android.material.tabs.TabLayout
                                 android:id="@+id/result_tabs"
@@ -577,8 +569,35 @@ Translator: Rainbow Turtle"
                                     <TextView
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
-                                            tools:text="@string/no_data"
+                                            tools:text="200/200"
                                             android:id="@+id/result_download_progress_text"
+                                            android:textSize="14sp"
+                                            android:textColor="?attr/colorPrimary" />
+
+                                    <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="@string/progress_downloaded"
+                                            android:layout_marginStart="4dp"
+                                            android:id="@+id/result_download_progress_label"
+                                            android:textSize="14sp"
+                                            android:textColor="?attr/colorPrimary" />
+
+                                    <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            tools:text="0/200"
+                                            android:layout_marginStart="16dp"
+                                            android:id="@+id/result_read_progress_text"
+                                            android:textSize="14sp"
+                                            android:textColor="?attr/textColor" />
+
+                                    <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="@string/progress_read"
+                                            android:layout_marginStart="4dp"
+                                            android:id="@+id/result_read_progress_label"
                                             android:textSize="14sp"
                                             android:textColor="?attr/textColor" />
 
@@ -598,20 +617,20 @@ Translator: Rainbow Turtle"
                                         android:layout_height="wrap_content">
 
                                     <androidx.core.widget.ContentLoadingProgressBar
-                                            android:progressTint="?attr/textColor"
+                                            android:progressTint="?attr/colorPrimary"
                                             android:id="@+id/result_download_progress_bar"
                                             android:layout_width="match_parent"
                                             android:indeterminate="false"
                                             tools:progress="50"
                                             android:layout_marginTop="10dp"
                                             android:layout_marginBottom="10dp"
-                                            android:progressBackgroundTint="?attr/textColor"
+                                            android:progressBackgroundTint="?attr/primaryGrayBackground"
                                             style="@android:style/Widget.Material.ProgressBar.Horizontal"
                                             android:layout_height="wrap_content" />
 
                                     <androidx.core.widget.ContentLoadingProgressBar
-                                            android:progressTint="?attr/colorPrimary"
-                                            android:id="@+id/result_download_progress_bar_not_downloaded"
+                                            android:progressTint="?attr/textColor"
+                                            android:id="@+id/result_read_progress_bar"
                                             android:layout_width="match_parent"
                                             android:indeterminate="false"
                                             tools:progress="20"
@@ -636,7 +655,7 @@ Translator: Rainbow Turtle"
                                             app:iconSize="20dp"
                                             android:text="Read epub"
                                             android:id="@+id/result_download_generate_epub"
-                                            style="@style/WhiteButton"
+                                            style="@style/ResultOutlineButton"
                                             android:layout_width="50dp" />
                                     <!--
                                           app:iconTint="@color/white"
@@ -650,7 +669,7 @@ Translator: Rainbow Turtle"
                                             android:gravity="center"
                                             android:id="@+id/result_download_btt"
                                             android:text="@string/download_text"
-                                            style="@style/BlackButton"
+                                            style="@style/ResultOutlineButton"
                                             app:iconSize="30dp"
                                             android:layout_width="50dp" />
                                 </LinearLayout>
@@ -664,7 +683,7 @@ Translator: Rainbow Turtle"
                                         app:iconSize="20dp"
                                         android:text="@string/quickstream_novel_text"
                                         android:id="@+id/result_quickstream"
-                                        style="@style/WhiteButton"
+                                        style="@style/ResultOutlineButton"
                                         android:layout_width="match_parent" />
                             </LinearLayout>
                         </LinearLayout>
@@ -743,7 +762,7 @@ Translator: Rainbow Turtle"
                         </FrameLayout>
 
                         <FrameLayout
-                                android:background="@drawable/white_card"
+                                android:background="@android:color/transparent"
                                 android:visibility="gone"
                                 tools:visibility="gone"
                                 android:id="@+id/result_chapterholder"

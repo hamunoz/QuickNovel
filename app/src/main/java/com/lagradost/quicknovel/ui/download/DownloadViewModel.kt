@@ -25,10 +25,13 @@ import com.lagradost.quicknovel.DOWNLOAD_EPUB_LAST_ACCESS
 import com.lagradost.quicknovel.DOWNLOAD_NORMAL_SORTING_METHOD
 import com.lagradost.quicknovel.DOWNLOAD_SETTINGS
 import com.lagradost.quicknovel.DOWNLOAD_SORTING_METHOD
+import com.lagradost.quicknovel.DOWNLOAD_UNREAD_ONLY_FILTER
+import com.lagradost.quicknovel.DOWNLOAD_COMPLETED_ONLY_FILTER
 import com.lagradost.quicknovel.DownloadActionType
 import com.lagradost.quicknovel.DownloadFileWorkManager
 import com.lagradost.quicknovel.DownloadProgressState
 import com.lagradost.quicknovel.DownloadState
+import com.lagradost.quicknovel.LibraryRefreshNotifications
 import com.lagradost.quicknovel.MainActivity
 import com.lagradost.quicknovel.MainActivity.Companion.loadResult
 import com.lagradost.quicknovel.PreferenceDelegate
@@ -40,8 +43,12 @@ import com.lagradost.quicknovel.RESULT_CHAPTER_FILTER_DOWNLOADED
 import com.lagradost.quicknovel.RESULT_CHAPTER_FILTER_READ
 import com.lagradost.quicknovel.RESULT_CHAPTER_FILTER_UNREAD
 import com.lagradost.quicknovel.RESULT_CHAPTER_SORT
+import com.lagradost.quicknovel.EPUB_CURRENT_POSITION_READ_AT
+import com.lagradost.quicknovel.StreamResponse
 import com.lagradost.quicknovel.mvvm.launchSafe
+import com.lagradost.quicknovel.mvvm.Resource
 import com.lagradost.quicknovel.ui.ReadType
+import com.lagradost.quicknovel.util.Apis
 import com.lagradost.quicknovel.util.Coroutines.ioSafe
 import com.lagradost.quicknovel.util.ResultCached
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +74,9 @@ const val REVERSE_LAST_UPDATED_SORT = 10
 const val CHAPTER_SORT = 11
 const val REVERSE_CHAPTER_SORT = 12
 
+const val UNREAD_CHAPTER_SORT = 13
+const val REVERSE_UNREAD_CHAPTER_SORT = 14
+
 data class SortingMethod(@StringRes val name: Int, val id: Int, val inverse: Int = id)
 class DownloadViewModel : ViewModel() {
 
@@ -91,6 +101,7 @@ class DownloadViewModel : ViewModel() {
             SortingMethod(R.string.default_sort, DEFAULT_SORT),
             SortingMethod(R.string.recently_sort, LAST_ACCES_SORT, REVERSE_LAST_ACCES_SORT),
             SortingMethod(R.string.alpha_sort, ALPHA_SORT, REVERSE_ALPHA_SORT),
+            SortingMethod(R.string.unread_chapters_sort, UNREAD_CHAPTER_SORT, REVERSE_UNREAD_CHAPTER_SORT),
         )
     }
 
@@ -100,6 +111,7 @@ class DownloadViewModel : ViewModel() {
         ReadType.PLAN_TO_READ,
         ReadType.COMPLETED,
         ReadType.DROPPED,
+        ReadType.TRASH,
     )
 
     var activeQuery: String = ""
@@ -109,9 +121,134 @@ class DownloadViewModel : ViewModel() {
     var currentTab: MutableLiveData<Int> =
         MutableLiveData<Int>(getKey(DOWNLOAD_SETTINGS, CURRENT_TAB, 0))
 
+    private val _isRefreshing: MutableLiveData<Boolean> = MutableLiveData(false)
+    val isRefreshing: LiveData<Boolean> = _isRefreshing
+
+    data class RefreshProgress(
+        val current: Int,
+        val total: Int,
+        val name: String,
+        val changedChapters: Int?
+    )
+
+    private val _refreshProgress: MutableLiveData<RefreshProgress> = MutableLiveData(null)
+    val refreshProgress: LiveData<RefreshProgress> = _refreshProgress
+
+    private val refreshMutex = Mutex()
+
+    @Volatile
+    private var readChaptersByNovelName: Map<String, Int> = emptyMap()
+
     fun switchPage(position: Int) {
         setKey(DOWNLOAD_SETTINGS, CURRENT_TAB, position)
         currentTab.postValue(position)
+    }
+
+    fun refreshCurrentTab() = viewModelScope.launchSafe {
+        refreshMutex.withLock {
+            val tabIndex = currentTab.value ?: 0
+            _isRefreshing.postValue(true)
+            try {
+                if (tabIndex == 0) {
+                    // Downloads refresh is already handled via WorkManager.
+                    refresh()
+                } else {
+                    refreshBookmarkCategory(tabIndex)
+                }
+            } finally {
+                _isRefreshing.postValue(false)
+            }
+        }
+    }
+
+    private suspend fun refreshBookmarkCategory(tabIndex: Int) {
+        val page = _pages.value?.getOrNull(tabIndex) ?: return
+        val items = page.unsortedItems.filterIsInstance<ResultCached>()
+        if (items.isEmpty()) return
+
+        val ctx = context ?: return
+        LibraryRefreshNotifications.showProgress(
+            ctx,
+            current = 0,
+            total = items.size,
+            title = ctx.getString(R.string.title_download),
+            details = ctx.getString(R.string.loading)
+        )
+
+        var refreshed = 0
+        var changed = 0
+        withContext(Dispatchers.IO) {
+            for ((index, cached) in items.withIndex()) {
+                _refreshProgress.postValue(
+                    RefreshProgress(
+                        current = index + 1,
+                        total = items.size,
+                        name = cached.name,
+                        changedChapters = null
+                    )
+                )
+
+                LibraryRefreshNotifications.showProgress(
+                    ctx,
+                    current = index + 1,
+                    total = items.size,
+                    title = ctx.getString(R.string.title_download),
+                    details = "${index + 1}/${items.size}: ${cached.name}"
+                )
+
+                val repo = Apis.getApiFromNameOrNull(cached.apiName) ?: continue
+                when (val res = repo.load(cached.source, allowCache = false)) {
+                    is Resource.Success -> {
+                        val load = res.value
+                        val totalChapters = (load as? StreamResponse)?.data?.size ?: cached.totalChapters
+                        val delta = totalChapters - cached.totalChapters
+                        if (delta != 0) changed += 1
+
+                        // Keep name stable to avoid breaking read-key matching.
+                        val updated = cached.copy(
+                            author = load.author ?: cached.author,
+                            poster = load.posterUrl ?: cached.poster,
+                            tags = load.tags ?: cached.tags,
+                            rating = load.rating ?: cached.rating,
+                            totalChapters = totalChapters,
+                            cachedTime = System.currentTimeMillis(),
+                            synopsis = load.synopsis ?: cached.synopsis
+                        )
+
+                        setKey(RESULT_BOOKMARK, cached.id.toString(), updated)
+
+                        _refreshProgress.postValue(
+                            RefreshProgress(
+                                current = index + 1,
+                                total = items.size,
+                                name = cached.name,
+                                changedChapters = delta
+                            )
+                        )
+
+                        refreshed += 1
+
+                        // Push occasional UI updates so changes are visible while refreshing.
+                        val shouldUpdateUi = items.size <= 20 || (index % 5 == 4) || index == items.lastIndex
+                        if (shouldUpdateUi) {
+                            // Rebuild pages from storage to reflect updated totals.
+                            // (Runs some IO; throttled above.)
+                            loadAllDataInternal(refreshAll = false)
+                        }
+                    }
+
+                    else -> {
+                        // Ignore failures; keep existing cached snapshot.
+                    }
+                }
+            }
+        }
+
+        LibraryRefreshNotifications.finish(
+            ctx,
+            title = ctx.getString(R.string.title_download),
+            details = "Updated ${refreshed}/${items.size} (changed: $changed)"
+        )
     }
 
     fun refreshCard(card: DownloadFragment.DownloadDataLoaded) {
@@ -369,6 +506,25 @@ class DownloadViewModel : ViewModel() {
             getKey(DOWNLOAD_SETTINGS, DOWNLOAD_NORMAL_SORTING_METHOD) ?: DEFAULT_SORT
         setKey(DOWNLOAD_SETTINGS, DOWNLOAD_NORMAL_SORTING_METHOD, newSortingMethod)
 
+        val unreadOnly = getKey(DOWNLOAD_SETTINGS, DOWNLOAD_UNREAD_ONLY_FILTER, false) == true
+        val completedOnly = getKey(DOWNLOAD_SETTINGS, DOWNLOAD_COMPLETED_ONLY_FILTER, false) == true
+        val readMapSnapshot = readChaptersByNovelName
+
+        fun unreadCount(item: ResultCached): Int {
+            val read = readMapSnapshot[item.name] ?: 0
+            val total = item.totalChapters
+            return (total - read).coerceAtLeast(0)
+        }
+
+        fun isCompletedNovel(item: ResultCached): Boolean {
+            // Check if status is "Completed"
+            if (item.status?.equals("Completed", ignoreCase = true) == true) return true
+            // Check if last chapter name contains (end), [end], etc.
+            val lastChapter = item.lastChapterName?.lowercase() ?: return false
+            val endPatterns = listOf("(end)", "[end]", "(finale)", "[finale]", "(final)", "[final]", "(完)")
+            return endPatterns.any { lastChapter.contains(it) }
+        }
+
         return when (newSortingMethod) {
             ALPHA_SORT -> {
                 currentArray.sortBy { t -> t.name }
@@ -390,6 +546,16 @@ class DownloadViewModel : ViewModel() {
                 }
                 currentArray
             }
+
+            UNREAD_CHAPTER_SORT -> {
+                currentArray.sortByDescending { t -> unreadCount(t) }
+                currentArray
+            }
+
+            REVERSE_UNREAD_CHAPTER_SORT -> {
+                currentArray.sortBy { t -> unreadCount(t) }
+                currentArray
+            }
             // DEFAULT_SORT, LAST_ACCES_SORT
             else -> {
                 currentArray.sortByDescending { t ->
@@ -401,7 +567,11 @@ class DownloadViewModel : ViewModel() {
                 }
                 currentArray
             }
-        }.filter { matchesQuery(it.name) }
+        }.filter { cached ->
+            matchesQuery(cached.name) && 
+            (!unreadOnly || (readMapSnapshot[cached.name] ?: 0) == 0) &&
+            (!completedOnly || isCompletedNovel(cached))
+        }
     }
 
     // very shitty copy as we need to deep copy to actually update it
@@ -429,6 +599,10 @@ class DownloadViewModel : ViewModel() {
     }
 
     fun loadAllData(refreshAll: Boolean) = viewModelScope.launch {
+        loadAllDataInternal(refreshAll)
+    }
+
+    private suspend fun loadAllDataInternal(refreshAll: Boolean) {
         if (refreshAll) fetchAllData(false)
         val mapping: HashMap<Int, ArrayList<ResultCached>> = hashMapOf(
             ReadType.PLAN_TO_READ.prefValue to arrayListOf(),
@@ -436,9 +610,21 @@ class DownloadViewModel : ViewModel() {
             ReadType.COMPLETED.prefValue to arrayListOf(),
             ReadType.ON_HOLD.prefValue to arrayListOf(),
             ReadType.READING.prefValue to arrayListOf(),
+            ReadType.TRASH.prefValue to arrayListOf(),
         )
 
         withContext(Dispatchers.IO) {
+            val readCounts = HashMap<String, Int>()
+            val prefix = "$EPUB_CURRENT_POSITION_READ_AT/"
+            for (key in (getKeys(EPUB_CURRENT_POSITION_READ_AT) ?: emptyList())) {
+                if (!key.startsWith(prefix)) continue
+                val rest = key.removePrefix(prefix)
+                val novelName = rest.substringBefore('/')
+                if (novelName.isBlank()) continue
+                readCounts[novelName] = (readCounts[novelName] ?: 0) + 1
+            }
+            readChaptersByNovelName = readCounts
+
             val keys = getKeys(RESULT_BOOKMARK_STATE)
             for (key in keys ?: emptyList()) {
                 val type = getKey<Int>(key) ?: continue

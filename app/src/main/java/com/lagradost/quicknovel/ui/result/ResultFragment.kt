@@ -267,7 +267,7 @@ class ResultFragment : Fragment() {
                                     context,
                                     null,
                                     0,
-                                    R.style.ChipFilled
+                                    R.style.ChipOutlinedTransparent
                                 )
                                 chip.setChipDrawable(chipDrawable)
                                 chip.text = tag
@@ -730,14 +730,26 @@ class ResultFragment : Fragment() {
             binding.resultDownloadProgressText.text =
                 "${progressState.progress}/${progressState.total}"
 
-            binding.resultDownloadProgressBarNotDownloaded.apply {
-                println("progressState: ${progressState}")
+            // Update read progress text with correct total
+            val readCount = viewModel.readCount.value ?: 0
+            binding.resultReadProgressText.text = "$readCount/${progressState.total}"
+
+            val downloadProgress = progressState.progress.toInt()
+            
+            // Bring the shorter bar to front so it's visible
+            if (downloadProgress < readCount) {
+                binding.resultDownloadProgressBar.bringToFront()
+            } else {
+                binding.resultReadProgressBar.bringToFront()
+            }
+
+            binding.resultReadProgressBar.apply {
                 max = progressState.total.toInt() * 100
                 val animation: ObjectAnimator = ObjectAnimator.ofInt(
                     this,
                     "progress",
                     this.progress,
-                    (progressState.progress - progressState.downloaded).toInt() * 100
+                    readCount * 100
                 )
                 animation.duration = 500
                 animation.setAutoCancel(true)
@@ -752,7 +764,7 @@ class ResultFragment : Fragment() {
                     this,
                     "progress",
                     this.progress,
-                    progressState.progress.toInt() * 100
+                    downloadProgress * 100
                 )
                 animation.duration = 500
                 animation.setAutoCancel(true)
@@ -762,8 +774,8 @@ class ResultFragment : Fragment() {
 
             val ePubGeneration = progressState.progress > 0
             binding.resultDownloadGenerateEpub.apply {
-                isClickable = ePubGeneration
-                alpha = if (ePubGeneration) 1f else 0.5f
+                isEnabled = ePubGeneration
+                alpha = if (isEnabled) 1f else 0.5f
             }
 
             val canDownload =
@@ -771,8 +783,8 @@ class ResultFragment : Fragment() {
 
             val canClick = progressState.total > 0
             binding.resultDownloadBtt.apply {
-                isClickable = canClick
-                alpha = if (canClick) 1f else 0.5f
+                isEnabled = canClick
+                alpha = if (isEnabled) 1f else 0.5f
 
                 //iconSize = 30.toPx
                 setText(
@@ -806,6 +818,35 @@ class ResultFragment : Fragment() {
                         else -> R.drawable.netflix_download
                     }
                 )
+            }
+        }
+
+        observe(viewModel.readCount) { readCount ->
+            val total = viewModel.downloadState.value?.total?.toInt() ?: 0
+            if (total > 0) {
+                binding.resultReadProgressText.text = "$readCount/$total"
+                
+                val downloadProgress = viewModel.downloadState.value?.progress?.toInt() ?: 0
+                // Bring the shorter bar to front so it's visible
+                if (downloadProgress < readCount) {
+                    binding.resultDownloadProgressBar.bringToFront()
+                } else {
+                    binding.resultReadProgressBar.bringToFront()
+                }
+                
+                binding.resultReadProgressBar.apply {
+                    max = total * 100
+                    val animation: ObjectAnimator = ObjectAnimator.ofInt(
+                        this,
+                        "progress",
+                        this.progress,
+                        readCount * 100
+                    )
+                    animation.duration = 500
+                    animation.setAutoCancel(true)
+                    animation.interpolator = DecelerateInterpolator()
+                    animation.start()
+                }
             }
         }
 
