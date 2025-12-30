@@ -1,3 +1,20 @@
+Essentially i've changed some things to make quicknovel more usable for myself and changed up the theming a little.
+
+Main stuff is
+- Extra trash category
+- Added Unread only and Completed novels only toggles to sort menu
+- Added sort by unread chapters this includes unread chapter count badges in library
+- You can pull down in category to refresh data for novels in that category (unread counts, cover images, etc)
+- Novel info page now has better download info and can be used offline without having to rely on the Downloads category/section
+- Better caching and loading behaviour (faster)
+
+**Screenshoots:**
+
+![Screenshot_20251230_175522_QuickNovel](https://github.com/user-attachments/assets/f32675d9-b1a1-4958-b8cb-38fa8e8abb72)
+
+
+
+
 # QuickNovel
 Adfree FOSS Android app for downloading novels. It also functions as an Epub reader.
 
@@ -29,10 +46,6 @@ Adfree FOSS Android app for downloading novels. It also functions as an Epub rea
 - https://sakuranovel.id
 - https://www.scribblehub.com
 - https://wtr-lab.com
-
-**Screenshoots:**
-
-<img src="./.github/home.jpg" height="400"/><img src="./.github/search.jpg" height="400"/><img src="./.github/downloads.jpg" height="400"/><img src="./.github/result.jpg" height="400"/><img src="./.github/reader.jpg" height="400"/>
 
 **Legal notice:**
 
