@@ -665,6 +665,11 @@ object BookDownloader2Helper {
         forceReload: Boolean = false,
         maxTries: Int = 5
     ): Boolean = withContext(Dispatchers.IO) {
+        // Don't attempt to download if URL is empty/blank (invalid chapter data)
+        if (data.url.isBlank()) {
+            return@withContext false
+        }
+        
         val rFile = File(filepath)
         if (rFile.exists() && rFile.length() > 0 && !forceReload) {
             return@withContext true

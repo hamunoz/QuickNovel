@@ -832,14 +832,12 @@ class ResultViewModel : ViewModel() {
         for (key in keys) {
             val cached = getKey<ResultCached>(key) ?: continue
             if (cached.apiName == apiName && cached.source == url) {
-                // Create placeholder chapters to preserve count
-                val placeholderChapters = (0 until cached.totalChapters).map { i ->
-                    ChapterData("Chapter ${i + 1}", "", null, null)
-                }
+                // Return cached metadata with empty chapter list
+                // Real chapters will be loaded from network
                 return StreamResponse(
                     url = cached.source,
                     name = cached.name,
-                    data = placeholderChapters,
+                    data = emptyList(),
                     author = cached.author,
                     posterUrl = cached.poster,
                     rating = cached.rating,
@@ -854,14 +852,12 @@ class ResultViewModel : ViewModel() {
         for (key in historyKeys) {
             val cached = getKey<ResultCached>(key) ?: continue
             if (cached.apiName == apiName && cached.source == url) {
-                // Create placeholder chapters to preserve count
-                val placeholderChapters = (0 until cached.totalChapters).map { i ->
-                    ChapterData("Chapter ${i + 1}", "", null, null)
-                }
+                // Return cached metadata with empty chapter list
+                // Real chapters will be loaded from network
                 return StreamResponse(
                     url = cached.source,
                     name = cached.name,
-                    data = placeholderChapters,
+                    data = emptyList(),
                     author = cached.author,
                     posterUrl = cached.poster,
                     rating = cached.rating,
