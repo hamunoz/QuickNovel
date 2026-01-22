@@ -3,32 +3,8 @@ Adfree FOSS Android app for Downloading Novels. It also functions as an Epub rea
 
 **Discord:** https://discord.gg/5Hus6fM
 
-**Download:** https://github.com/LagradOst/QuickNovel/releases
+**Download:** https://github.com/LagradOst/QuickNovel/releases (original)
 
-**Providers used:** 
-
-- https://allnovel.org
-- https://annas-archive.org
-- https://bestlightnovel.com
-- https://freewebnovel.com
-- https://graycity.net
-- https://hiraethtranslation.com
-- https://indowebnovel.id
-- https://kolnovel.com
-- https://libread.com
-- https://meionovels.com
-- https://risenovel.com
-- https://www.mtlnovels.com
-- https://novelbin.com
-- https://novelfull.com
-- https://novelsonline.org
-- https://pawread.com
-- https://readfrom.net
-- https://readnovelfull.com
-- https://www.royalroad.com
-- https://sakuranovel.id
-- https://www.scribblehub.com
-- https://wtr-lab.com
 
 **Screenshoots:**
 
